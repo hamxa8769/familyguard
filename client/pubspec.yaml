@@ -2,7 +2,7 @@ name: familyguard
 description: Transparent cross-platform parental-control app.
 publish_to: "none"
 # <semver>+<build number>. Bump on every release; the git tag (vX.Y.Z) drives CI.
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
