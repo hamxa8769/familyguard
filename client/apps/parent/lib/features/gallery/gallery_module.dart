@@ -38,7 +38,7 @@ class GalleryViewScreen extends StatelessWidget {
         ),
         itemCount: files.length,
         itemBuilder: (context, i) {
-          final (name, size, when, isImage) = files[i];
+          final (name, size, whenLabel, isImage) = files[i];
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -54,7 +54,7 @@ class GalleryViewScreen extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 11)),
-                Text('$size • $when',
+                Text('$size • $whenLabel',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 9)),
