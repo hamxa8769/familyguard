@@ -7,6 +7,7 @@ import 'features/web_filter/web_filter_module.dart';
 import 'features/geofencing/geofencing_module.dart';
 import 'features/bedtime/bedtime_module.dart';
 import 'features/messages/messages_module.dart';
+import 'features/call_log/call_log_module.dart';
 import 'features/alerts/alerts_module.dart';
 
 /// The single list of parent-side features. Add a new feature here and it
@@ -21,6 +22,7 @@ class FeatureRegistry {
     GeofencingModule(),
     BedtimeModule(),
     MessagesModule(),
+    CallLogModule(),
     AlertsModule(),
   ];
 }

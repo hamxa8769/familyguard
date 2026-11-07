@@ -16,6 +16,7 @@ export const store = {
   bedtimeSchedules: [], // { deviceId, startHour, endHour }
   contacts: [],         // { deviceId, items: [{name, number}] }
   smsMessages: [],      // { deviceId, items: [{address, body, date, type}] }
+  callLogs: [],         // { deviceId, items: [{number, type, date, duration}] }
 };
 
 let counter = 1;

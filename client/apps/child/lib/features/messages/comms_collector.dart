@@ -50,6 +50,19 @@ class CommsCollector {
     }
   }
 
+  Future<List<CallLogEntry>> callLog() async {
+    if (!Platform.isAndroid) return _sampleCalls;
+    try {
+      final List<dynamic> data =
+          await _channel.invokeMethod('getCallLog') ?? <dynamic>[];
+      return data
+          .map((e) => CallLogEntry.fromMap(e as Map<dynamic, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   // Sample data for non-Android (Windows/desktop preview).
   static const _sampleContacts = [
     ContactEntry('Ammi', '+92 300 1234567'),
@@ -60,5 +73,11 @@ class CommsCollector {
   static final _sampleSms = [
     SmsMessage(address: '+92 300 1234567', body: 'Beta ghar kab aao ge?', dateMillis: DateTime.now().millisecondsSinceEpoch - 600000, type: 1),
     SmsMessage(address: '+92 301 7654321', body: 'Kal milte hain', dateMillis: DateTime.now().millisecondsSinceEpoch - 3600000, type: 2),
+  ];
+
+  static final _sampleCalls = [
+    CallLogEntry(number: '+92 300 1234567', type: 1, dateMillis: DateTime.now().millisecondsSinceEpoch - 1200000, durationSeconds: 95),
+    CallLogEntry(number: '+92 301 7654321', type: 2, dateMillis: DateTime.now().millisecondsSinceEpoch - 5400000, durationSeconds: 0),
+    CallLogEntry(number: '+92 42 111222333', type: 3, dateMillis: DateTime.now().millisecondsSinceEpoch - 86400000, durationSeconds: 0),
   ];
 }

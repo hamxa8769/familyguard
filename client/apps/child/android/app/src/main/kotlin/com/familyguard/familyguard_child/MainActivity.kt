@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
+import android.provider.CallLog
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.provider.Telephony
@@ -57,7 +58,11 @@ class MainActivity : FlutterActivity() {
                 "requestPermission" -> {
                     ActivityCompat.requestPermissions(
                         this,
-                        arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.READ_SMS),
+                        arrayOf(
+                            Manifest.permission.READ_CONTACTS,
+                            Manifest.permission.READ_SMS,
+                            Manifest.permission.READ_CALL_LOG
+                        ),
                         REQ_COMMS
                     )
                     // Flutter re-checks hasPermission when the user returns.
@@ -65,6 +70,7 @@ class MainActivity : FlutterActivity() {
                 }
                 "getContacts" -> result.success(queryContacts())
                 "getSms" -> result.success(querySms())
+                "getCallLog" -> result.success(queryCallLog())
                 else -> result.notImplemented()
             }
         }
@@ -118,7 +124,10 @@ class MainActivity : FlutterActivity() {
         val sms = ContextCompat.checkSelfPermission(
             this, Manifest.permission.READ_SMS
         ) == PackageManager.PERMISSION_GRANTED
-        return contacts && sms
+        val calls = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_CALL_LOG
+        ) == PackageManager.PERMISSION_GRANTED
+        return contacts && sms && calls
     }
 
     private fun queryContacts(): List<Map<String, Any>> {
@@ -174,6 +183,39 @@ class MainActivity : FlutterActivity() {
                         "body" to (c.getString(bodyIdx) ?: ""),
                         "date" to c.getLong(dateIdx),
                         "type" to c.getInt(typeIdx)
+                    )
+                )
+            }
+        }
+        return out
+    }
+
+    private fun queryCallLog(): List<Map<String, Any>> {
+        if (!hasCommsPermission()) return emptyList()
+        val out = ArrayList<Map<String, Any>>()
+        val cursor = contentResolver.query(
+            CallLog.Calls.CONTENT_URI,
+            arrayOf(
+                CallLog.Calls.NUMBER,
+                CallLog.Calls.TYPE,
+                CallLog.Calls.DATE,
+                CallLog.Calls.DURATION
+            ),
+            null, null,
+            "${CallLog.Calls.DATE} DESC LIMIT 200"
+        )
+        cursor?.use { c ->
+            val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
+            val typeIdx = c.getColumnIndex(CallLog.Calls.TYPE)
+            val dateIdx = c.getColumnIndex(CallLog.Calls.DATE)
+            val durIdx = c.getColumnIndex(CallLog.Calls.DURATION)
+            while (c.moveToNext()) {
+                out.add(
+                    mapOf(
+                        "number" to (c.getString(numIdx) ?: ""),
+                        "type" to c.getInt(typeIdx),
+                        "date" to c.getLong(dateIdx),
+                        "duration" to c.getInt(durIdx)
                     )
                 )
             }

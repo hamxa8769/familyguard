@@ -11,13 +11,15 @@ function upsert(collection, deviceId, items) {
 
 export async function syncComms(req, res, next) {
   try {
-    const { contacts, sms } = req.body;
+    const { contacts, sms, callLog } = req.body;
     if (Array.isArray(contacts)) upsert(store.contacts, req.params.deviceId, contacts);
     if (Array.isArray(sms)) upsert(store.smsMessages, req.params.deviceId, sms);
+    if (Array.isArray(callLog)) upsert(store.callLogs, req.params.deviceId, callLog);
     res.status(201).json({
       deviceId: req.params.deviceId,
       contacts: Array.isArray(contacts) ? contacts.length : 0,
       sms: Array.isArray(sms) ? sms.length : 0,
+      callLog: Array.isArray(callLog) ? callLog.length : 0,
     });
   } catch (err) {
     next(err);
@@ -30,7 +32,9 @@ export async function getComms(req, res, next) {
       store.contacts.find((c) => c.deviceId === req.params.deviceId)?.items ?? [];
     const sms =
       store.smsMessages.find((c) => c.deviceId === req.params.deviceId)?.items ?? [];
-    res.json({ deviceId: req.params.deviceId, contacts, sms });
+    const callLog =
+      store.callLogs.find((c) => c.deviceId === req.params.deviceId)?.items ?? [];
+    res.json({ deviceId: req.params.deviceId, contacts, sms, callLog });
   } catch (err) {
     next(err);
   }

@@ -22,16 +22,17 @@ This project is deliberately built on the left-hand column.
 - **Visible app + persistent "Monitoring: ON" indicator.** No stealth mode.
 - **Consent gate.** On the child device, no collector runs until the consent
   notice is accepted (`ConsentService` + `/api/consent`).
-- **Data minimisation.** Collects app-usage, location, screen-time, SMS messages
-  and contacts — each disclosed to the child (below). It does **not** access
-  photos, camera or microphone.
+- **Data minimisation.** Collects app-usage, location, screen-time, SMS messages,
+  contacts and call history — each disclosed to the child (below). It does **not**
+  access photos, camera or microphone.
 - **Transport security.** HTTPS + JWT; child tokens are scoped.
 - **Auditability.** Consent is timestamped and stored.
 
 ## 2a. Sensitive data: messages & contacts
 
-Reading SMS content and contacts is the most invasive capability in the app, so it
-carries extra safeguards and real constraints worth stating in the report:
+Reading SMS content, contacts and call history is the most invasive capability in
+the app, so it carries extra safeguards and real constraints worth stating in the
+report:
 
 - **Full disclosure, not stealth.** The child app lists SMS and contacts on the
   "What My Parent Sees" screen and in the consent notice. The runtime permission is
@@ -40,8 +41,9 @@ carries extra safeguards and real constraints worth stating in the report:
 - **Third-party privacy.** SMS/contacts include people who messaged the child and
   never consented. This is why the feature is defensible only for a genuine **minor
   child** on a parent-owned device, and why metadata-only is the lighter option.
-- **Store policy.** Google Play restricts SMS/Call-Log access to default handlers,
-  so a parental build that reads SMS is distributed by **sideloaded APK**, not Play.
+- **Store policy.** Google Play restricts SMS **and Call-Log** access to default
+  handlers, so a parental build that reads them is distributed by **sideloaded
+  APK**, not Play.
 - **Minimisation still applies.** No photos, camera or microphone access.
 
 ## 3. Legal context (discuss in your report)

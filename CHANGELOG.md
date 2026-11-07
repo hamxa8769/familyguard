@@ -14,6 +14,15 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - Native OS collectors (Android UsageStatsManager, Windows foreground sampling)
 - Postgres persistence + push notifications
 
+## [0.5.0] - 2026-11-07
+
+### Added
+- **Call Log (Android, child app).** Native reading of call history (number, type
+  incoming/outgoing/missed, time, duration) via `CallLog.Calls` with the
+  READ_CALL_LOG runtime permission; parent app gains a Call Log viewer; backend
+  `comms` module extended to sync/serve call logs. Disclosed to the child in the
+  consent notice and "What My Parent Sees".
+
 ## [0.4.0] - 2026-11-07
 
 ### Added
@@ -64,7 +73,8 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
   (APK + Windows EXE published to GitHub Releases on each `v*` tag).
 - Docs: README, ARCHITECTURE, ROADMAP, ETHICS, ADDING_A_FEATURE, RELEASING.
 
-[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.5.0
 [0.4.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.4.0
 [0.3.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.3.0
 [0.2.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.2.0

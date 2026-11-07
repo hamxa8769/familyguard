@@ -13,6 +13,7 @@ class TransparencyScreen extends StatelessWidget {
     'SOS alerts you trigger',
     'Your SMS messages (sender, text, and time)',
     'Your contacts (names and numbers)',
+    'Your call history (number, type, time, duration)',
   ];
 
   @override
