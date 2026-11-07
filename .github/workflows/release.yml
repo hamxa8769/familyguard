@@ -26,6 +26,10 @@ jobs:
         working-directory: client
         run: |
           flutter create --org com.familyguard --project-name familyguard --platforms=android .
+          # Add Usage Access permission to the generated manifest (idempotent).
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          grep -q PACKAGE_USAGE_STATS "$MANIFEST" || \
+            sed -i 's#<application#<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />\n    <application#' "$MANIFEST"
           flutter pub get
           flutter build apk --release
       - name: Rename artifact

@@ -6,6 +6,11 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added
+- **Android native app-usage tracking** — real foreground-time per app via
+  `UsageStatsManager` over the `familyguard/usage` MethodChannel, with an
+  in-app Usage Access permission prompt that links to system settings.
+
 ### Planned (see docs/ROADMAP.md — Phase 2)
 - AI keyword / sentiment alerts
 - Reward system
