@@ -6,6 +6,8 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
 import android.os.Build
 import android.os.Process
 import android.provider.CallLog
@@ -32,6 +34,7 @@ import java.util.Calendar
 class MainActivity : FlutterActivity() {
     private val usageChannel = "familyguard/usage"
     private val commsChannel = "familyguard/comms"
+    private val locationChannel = "familyguard/location"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -71,6 +74,25 @@ class MainActivity : FlutterActivity() {
                 "getContacts" -> result.success(queryContacts())
                 "getSms" -> result.success(querySms())
                 "getCallLog" -> result.success(queryCallLog())
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(messenger, locationChannel).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasPermission" -> result.success(hasLocationPermission())
+                "requestPermission" -> {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        ),
+                        REQ_LOCATION
+                    )
+                    result.success(true)
+                }
+                "getLocation" -> result.success(lastKnownLocation())
                 else -> result.notImplemented()
             }
         }
@@ -223,7 +245,37 @@ class MainActivity : FlutterActivity() {
         return out
     }
 
+    // ---- Location ----
+
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun lastKnownLocation(): Map<String, Any>? {
+        if (!hasLocationPermission()) return null
+        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        var best: Location? = null
+        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        for (p in providers) {
+            try {
+                if (!lm.isProviderEnabled(p)) continue
+                val loc = lm.getLastKnownLocation(p) ?: continue
+                if (best == null || loc.time > best.time) best = loc
+            } catch (_: SecurityException) {
+                return null
+            }
+        }
+        val b = best ?: return null
+        return mapOf("lat" to b.latitude, "lng" to b.longitude, "time" to b.time)
+    }
+
     companion object {
         private const val REQ_COMMS = 1001
+        private const val REQ_LOCATION = 1002
     }
 }

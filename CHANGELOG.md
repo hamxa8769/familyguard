@@ -14,6 +14,15 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - Native OS collectors (Android UsageStatsManager, Windows foreground sampling)
 - Postgres persistence + push notifications
 
+## [0.6.0] - 2026-11-07
+
+### Added
+- **Location (Android GPS, child app).** Native last-known GPS via LocationManager
+  with ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION runtime permission; child
+  Location screen shows the current shared point; parent app gains a Location
+  viewer (current + recent history, map placeholder). Location was already in the
+  consent notice and the transparency screen.
+
 ## [0.5.0] - 2026-11-07
 
 ### Added
@@ -73,7 +82,8 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
   (APK + Windows EXE published to GitHub Releases on each `v*` tag).
 - Docs: README, ARCHITECTURE, ROADMAP, ETHICS, ADDING_A_FEATURE, RELEASING.
 
-[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.6.0
 [0.5.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.5.0
 [0.4.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.4.0
 [0.3.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.3.0

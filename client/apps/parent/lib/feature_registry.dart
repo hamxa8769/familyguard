@@ -1,6 +1,7 @@
 import 'feature_module.dart';
 import 'features/dashboard/dashboard_module.dart';
 import 'features/children/children_module.dart';
+import 'features/location/location_module.dart';
 import 'features/screen_time/screen_time_module.dart';
 import 'features/app_blocking/app_blocking_module.dart';
 import 'features/web_filter/web_filter_module.dart';
@@ -16,6 +17,7 @@ class FeatureRegistry {
   static final List<FeatureModule> all = [
     DashboardModule(),
     ChildrenModule(),
+    LocationModule(),
     ScreenTimeModule(),
     AppBlockingModule(),
     WebFilterModule(),

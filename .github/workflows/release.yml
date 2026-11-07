@@ -29,8 +29,8 @@ jobs:
           flutter create --org com.familyguard --project-name familyguard_child --platforms=android .
           # Child app reads usage stats, contacts and SMS — add the permissions.
           M=android/app/src/main/AndroidManifest.xml
-          PERMS='<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />\n    <uses-permission android:name="android.permission.READ_CONTACTS" />\n    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.READ_CALL_LOG" />\n    '
-          grep -q READ_CALL_LOG "$M" || sed -i "s#<application#${PERMS}<application#" "$M"
+          PERMS='<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />\n    <uses-permission android:name="android.permission.READ_CONTACTS" />\n    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.READ_CALL_LOG" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    '
+          grep -q ACCESS_FINE_LOCATION "$M" || sed -i "s#<application#${PERMS}<application#" "$M"
           flutter pub get
           flutter build apk --release
       - run: cp client/apps/child/build/app/outputs/flutter-apk/app-release.apk familyguard-child-${{ github.ref_name }}.apk

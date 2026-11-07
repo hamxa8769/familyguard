@@ -14,3 +14,4 @@ export 'src/models/sos_alert.dart';
 export 'src/models/contact_entry.dart';
 export 'src/models/sms_message.dart';
 export 'src/models/call_log_entry.dart';
+export 'src/models/location_point.dart';
