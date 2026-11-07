@@ -1,0 +1,18 @@
+# Node
+node_modules/
+backend/.env
+
+# Flutter
+client/.dart_tool/
+client/build/
+client/.flutter-plugins
+client/.flutter-plugins-dependencies
+client/.packages
+client/pubspec.lock
+
+# Editors / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
