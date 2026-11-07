@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  client-analyze:
+    name: Flutter analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Generate platform folders
+        working-directory: client
+        run: flutter create --org com.familyguard --project-name familyguard --platforms=android,windows .
+      - name: Install dependencies
+        working-directory: client
+        run: flutter pub get
+      - name: Analyze
+        working-directory: client
+        # Only real errors fail CI; style infos/warnings do not.
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+  backend-check:
+    name: Backend syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        working-directory: backend
+        run: npm install
+      - name: Syntax check all modules
+        working-directory: backend
+        run: find src -name "*.js" -print0 | xargs -0 -n1 node --check && echo "All backend JS OK"

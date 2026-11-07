@@ -1,0 +1,60 @@
+name: Release
+
+# Pushing a version tag (vX.Y.Z) builds the APK + Windows EXE and publishes a
+# GitHub Release with both attached. This is how the app is updated.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Build APK
+        working-directory: client
+        run: |
+          flutter create --org com.familyguard --project-name familyguard --platforms=android .
+          flutter pub get
+          flutter build apk --release
+      - name: Rename artifact
+        run: cp client/build/app/outputs/flutter-apk/app-release.apk familyguard-${{ github.ref_name }}.apk
+      - name: Publish to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: familyguard-${{ github.ref_name }}.apk
+          generate_release_notes: true
+
+  windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Build Windows
+        working-directory: client
+        run: |
+          flutter create --org com.familyguard --project-name familyguard --platforms=windows .
+          flutter pub get
+          flutter build windows --release
+      - name: Zip artifact
+        shell: pwsh
+        run: Compress-Archive -Path client/build/windows/x64/runner/Release/* -DestinationPath familyguard-${{ github.ref_name }}-windows.zip
+      - name: Publish to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: familyguard-${{ github.ref_name }}-windows.zip
+          generate_release_notes: true

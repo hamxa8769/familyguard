@@ -1,0 +1,7 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Keep CI green on style lints; real errors still fail the build.
+    prefer_const_constructors: ignore
+    use_super_parameters: ignore
