@@ -11,8 +11,10 @@ class ConsentScreen extends StatelessWidget {
   static const consentText =
       'This device is managed with FamilyGuard. While it is active, a parent or '
       'guardian in your family can see which apps are used and for how long, this '
-      'device\'s location, and screen-time limits. FamilyGuard runs visibly and '
-      'does not hide itself. Monitoring starts only after you accept below.';
+      'device\'s location, screen-time limits, and your SMS messages and contacts. '
+      'FamilyGuard runs visibly and does not hide itself, and you can always open '
+      '"What My Parent Sees" to check exactly what is shared. Monitoring starts '
+      'only after you accept below.';
 
   @override
   Widget build(BuildContext context) {

@@ -4,6 +4,7 @@ import 'consent/consent_screen.dart';
 import 'features/usage/usage_screen.dart';
 import 'features/location/location_screen.dart';
 import 'features/sos/sos_screen.dart';
+import 'features/messages/messages_screen.dart';
 import 'features/transparency/transparency_screen.dart';
 
 void main() => runApp(const ChildApp());
@@ -62,6 +63,8 @@ class ChildHome extends StatelessWidget {
       (Icons.location_on, 'Location Sharing', 'What location is shared',
           const LocationScreen()),
       (Icons.sos, 'SOS', 'Send an emergency alert', const SosScreen()),
+      (Icons.sms, 'Messages & Contacts', 'What SMS/contacts are shared',
+          const MessagesScreen()),
       (Icons.visibility, 'What My Parent Sees', 'Full transparency',
           const TransparencyScreen()),
     ];

@@ -14,6 +14,8 @@ export const store = {
   sosAlerts: [],        // { id, deviceId, message, at, resolved }
   webFilters: [],       // { deviceId, blockedDomains: [] }
   bedtimeSchedules: [], // { deviceId, startHour, endHour }
+  contacts: [],         // { deviceId, items: [{name, number}] }
+  smsMessages: [],      // { deviceId, items: [{address, body, date, type}] }
 };
 
 let counter = 1;

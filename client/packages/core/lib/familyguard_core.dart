@@ -11,3 +11,5 @@ export 'src/consent/consent_service.dart';
 export 'src/models/usage_entry.dart';
 export 'src/models/child_profile.dart';
 export 'src/models/sos_alert.dart';
+export 'src/models/contact_entry.dart';
+export 'src/models/sms_message.dart';

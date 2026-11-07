@@ -14,6 +14,20 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - Native OS collectors (Android UsageStatsManager, Windows foreground sampling)
 - Postgres persistence + push notifications
 
+## [0.4.0] - 2026-11-07
+
+### Added
+- **Messages & Contacts (Android, child app).** Native reading of SMS (sender,
+  text, time) and contacts via ContentResolver with READ_SMS / READ_CONTACTS
+  runtime permissions; parent app gains a Messages & Contacts viewer; backend
+  `comms` module syncs/serves them.
+
+### Changed
+- **Transparency updated honestly.** The child consent notice and "What My Parent
+  Sees" screen now disclose that SMS and contacts are visible to the parent; the
+  "not collected" note is corrected to photos/camera/microphone. ETHICS doc gains
+  a "Messages & contacts" section (third-party privacy, Play policy, minor-only).
+
 ## [0.3.0] - 2026-11-07
 
 ### Changed
@@ -50,7 +64,8 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
   (APK + Windows EXE published to GitHub Releases on each `v*` tag).
 - Docs: README, ARCHITECTURE, ROADMAP, ETHICS, ADDING_A_FEATURE, RELEASING.
 
-[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.4.0
 [0.3.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.3.0
 [0.2.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.2.0
 [0.1.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.1.0

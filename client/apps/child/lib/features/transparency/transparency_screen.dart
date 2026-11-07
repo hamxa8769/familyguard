@@ -11,6 +11,8 @@ class TransparencyScreen extends StatelessWidget {
     'Screen-time usage against the daily limit',
     'Geofence enter/exit events',
     'SOS alerts you trigger',
+    'Your SMS messages (sender, text, and time)',
+    'Your contacts (names and numbers)',
   ];
 
   @override
@@ -44,7 +46,7 @@ class TransparencyScreen extends StatelessWidget {
           Text('Not collected', style: Theme.of(context).textTheme.titleMedium),
           const ListTile(
             leading: Icon(Icons.not_interested),
-            title: Text('Message or photo content'),
+            title: Text('Photos, camera, or microphone'),
             dense: true,
           ),
         ],
