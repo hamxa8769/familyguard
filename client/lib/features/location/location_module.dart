@@ -20,7 +20,7 @@ class LocationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Sample data; real points come from POST /api/location on the child device.
-    final history = const [
+    const history = [
       ('Now', 'Home', '31.5204, 74.3587'),
       ('1h ago', 'School', '31.5100, 74.3450'),
       ('3h ago', 'Park', '31.5300, 74.3700'),

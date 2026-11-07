@@ -19,7 +19,7 @@ class GeofencingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zones = const [
+    const zones = [
       ('Home', '150 m', 'Inside'),
       ('School', '200 m', 'Left 2h ago'),
     ];

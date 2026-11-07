@@ -20,7 +20,7 @@ class ReportsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Sample summary; real data from GET /api/reports/:deviceId
-    final apps = const [
+    const apps = [
       ('Browser', 60),
       ('Games', 30),
       ('Messaging', 20),
