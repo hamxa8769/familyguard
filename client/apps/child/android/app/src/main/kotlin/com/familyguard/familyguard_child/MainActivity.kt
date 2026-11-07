@@ -11,6 +11,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Process
 import android.provider.CallLog
+import android.provider.MediaStore
 import android.provider.ContactsContract
 import android.provider.Settings
 import android.provider.Telephony
@@ -35,6 +36,7 @@ class MainActivity : FlutterActivity() {
     private val usageChannel = "familyguard/usage"
     private val commsChannel = "familyguard/comms"
     private val locationChannel = "familyguard/location"
+    private val filesChannel = "familyguard/files"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -93,6 +95,23 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "getLocation" -> result.success(lastKnownLocation())
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(messenger, filesChannel).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasPermission" -> result.success(hasGalleryPermission())
+                "requestPermission" -> {
+                    val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
+                    } else {
+                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    }
+                    ActivityCompat.requestPermissions(this, perms, REQ_GALLERY)
+                    result.success(true)
+                }
+                "getImages" -> result.success(queryImages())
                 else -> result.notImplemented()
             }
         }
@@ -274,8 +293,55 @@ class MainActivity : FlutterActivity() {
         return mapOf("lat" to b.latitude, "lng" to b.longitude, "time" to b.time)
     }
 
+    // ---- Gallery (images) ----
+
+    private fun hasGalleryPermission(): Boolean {
+        val perm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        return ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun queryImages(): List<Map<String, Any>> {
+        if (!hasGalleryPermission()) return emptyList()
+        val out = ArrayList<Map<String, Any>>()
+        val proj = arrayOf(
+            MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.SIZE,
+            MediaStore.Images.Media.DATE_MODIFIED,
+            MediaStore.Images.Media.DATA
+        )
+        val cursor = contentResolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            proj, null, null,
+            "${MediaStore.Images.Media.DATE_MODIFIED} DESC LIMIT 200"
+        )
+        cursor?.use { c ->
+            val nameIdx = c.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+            val sizeIdx = c.getColumnIndex(MediaStore.Images.Media.SIZE)
+            val dateIdx = c.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED)
+            val dataIdx = c.getColumnIndex(MediaStore.Images.Media.DATA)
+            while (c.moveToNext()) {
+                out.add(
+                    mapOf(
+                        "name" to (c.getString(nameIdx) ?: ""),
+                        "path" to (c.getString(dataIdx) ?: ""),
+                        "size" to c.getLong(sizeIdx),
+                        // DATE_MODIFIED is seconds since epoch -> milliseconds.
+                        "date" to c.getLong(dateIdx) * 1000,
+                        "isImage" to true
+                    )
+                )
+            }
+        }
+        return out
+    }
+
     companion object {
         private const val REQ_COMMS = 1001
         private const val REQ_LOCATION = 1002
+        private const val REQ_GALLERY = 1003
     }
 }

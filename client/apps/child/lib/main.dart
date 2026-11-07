@@ -6,6 +6,7 @@ import 'features/location/location_screen.dart';
 import 'features/sos/sos_screen.dart';
 import 'features/messages/messages_screen.dart';
 import 'features/call_log/call_log_screen.dart';
+import 'features/gallery/gallery_screen.dart';
 import 'features/transparency/transparency_screen.dart';
 
 void main() => runApp(const ChildApp());
@@ -68,6 +69,8 @@ class ChildHome extends StatelessWidget {
           const MessagesScreen()),
       (Icons.call, 'Call Log', 'What call history is shared',
           const CallLogScreen()),
+      (Icons.photo_library, 'Gallery & Files', 'What photos/files are shared',
+          const GalleryScreen()),
       (Icons.visibility, 'What My Parent Sees', 'Full transparency',
           const TransparencyScreen()),
     ];

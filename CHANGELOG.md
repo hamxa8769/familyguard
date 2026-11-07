@@ -14,6 +14,20 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - Native OS collectors (Android UsageStatsManager, Windows foreground sampling)
 - Postgres persistence + push notifications
 
+## [0.7.0] - 2026-11-07
+
+### Added
+- **Gallery & Files (Android + Windows, child app).** Android lists images via
+  MediaStore (READ_MEDIA_IMAGES); Windows lists the Pictures folder via dart:io.
+  Child Gallery screen shows real thumbnails of its own device; parent app gains a
+  Gallery & Files viewer (metadata grid; image-byte sync is a TODO); backend `files`
+  module syncs/serves the listing.
+
+### Changed
+- **Transparency updated honestly.** Consent + "What My Parent Sees" now disclose
+  photos/files; the "not collected" note is corrected to live camera/microphone;
+  ETHICS notes photos may contain images of third parties.
+
 ## [0.6.0] - 2026-11-07
 
 ### Added
@@ -82,7 +96,8 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
   (APK + Windows EXE published to GitHub Releases on each `v*` tag).
 - Docs: README, ARCHITECTURE, ROADMAP, ETHICS, ADDING_A_FEATURE, RELEASING.
 
-[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.7.0
 [0.6.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.6.0
 [0.5.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.5.0
 [0.4.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.4.0

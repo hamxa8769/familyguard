@@ -14,6 +14,7 @@ class TransparencyScreen extends StatelessWidget {
     'Your SMS messages (sender, text, and time)',
     'Your contacts (names and numbers)',
     'Your call history (number, type, time, duration)',
+    'Your photos and files (name, size, date)',
   ];
 
   @override
@@ -47,7 +48,7 @@ class TransparencyScreen extends StatelessWidget {
           Text('Not collected', style: Theme.of(context).textTheme.titleMedium),
           const ListTile(
             leading: Icon(Icons.not_interested),
-            title: Text('Photos, camera, or microphone'),
+            title: Text('Live camera or microphone capture'),
             dense: true,
           ),
         ],

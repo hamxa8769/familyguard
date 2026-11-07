@@ -23,16 +23,17 @@ This project is deliberately built on the left-hand column.
 - **Consent gate.** On the child device, no collector runs until the consent
   notice is accepted (`ConsentService` + `/api/consent`).
 - **Data minimisation.** Collects app-usage, location, screen-time, SMS messages,
-  contacts and call history — each disclosed to the child (below). It does **not**
-  access photos, camera or microphone.
+  contacts, call history, and photo/file listings — each disclosed to the child
+  (below). It does **not** capture live camera or microphone.
 - **Transport security.** HTTPS + JWT; child tokens are scoped.
 - **Auditability.** Consent is timestamped and stored.
 
 ## 2a. Sensitive data: messages & contacts
 
-Reading SMS content, contacts and call history is the most invasive capability in
-the app, so it carries extra safeguards and real constraints worth stating in the
-report:
+Reading SMS content, contacts, call history and photos/files is the most invasive
+capability in the app, so it carries extra safeguards and real constraints worth
+stating in the report (photos are especially sensitive and may contain images of
+third parties):
 
 - **Full disclosure, not stealth.** The child app lists SMS and contacts on the
   "What My Parent Sees" screen and in the consent notice. The runtime permission is

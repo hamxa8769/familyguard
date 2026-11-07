@@ -17,6 +17,7 @@ export const store = {
   contacts: [],         // { deviceId, items: [{name, number}] }
   smsMessages: [],      // { deviceId, items: [{address, body, date, type}] }
   callLogs: [],         // { deviceId, items: [{number, type, date, duration}] }
+  files: [],            // { deviceId, items: [{name, path, size, date, isImage}] }
 };
 
 let counter = 1;

@@ -15,6 +15,7 @@ import bedtimeRoutes from './modules/bedtime/bedtime.routes.js';
 import reportsRoutes from './modules/reports/reports.routes.js';
 import transparencyRoutes from './modules/transparency/transparency.routes.js';
 import commsRoutes from './modules/comms/comms.routes.js';
+import filesRoutes from './modules/files/files.routes.js';
 
 export function registerRoutes(app) {
   app.use('/api/auth', authRoutes);
@@ -32,4 +33,5 @@ export function registerRoutes(app) {
   app.use('/api/reports', reportsRoutes);
   app.use('/api/transparency', transparencyRoutes);
   app.use('/api/comms', commsRoutes);
+  app.use('/api/files', filesRoutes);
 }
