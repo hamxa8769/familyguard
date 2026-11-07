@@ -1,7 +1,7 @@
 name: Release
 
-# Pushing a version tag (vX.Y.Z) builds the APK + Windows EXE and publishes a
-# GitHub Release with both attached. This is how the app is updated.
+# Pushing a version tag (vX.Y.Z) builds both apps (child + parent) for Android
+# and Windows, and publishes a GitHub Release with all artifacts attached.
 on:
   push:
     tags: ["v*"]
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   android:
-    name: Build Android APK
+    name: Build Android APKs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,43 +22,68 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Build APK
-        working-directory: client
+
+      - name: Build CHILD apk
+        working-directory: client/apps/child
         run: |
-          flutter create --org com.familyguard --project-name familyguard --platforms=android .
-          # Add Usage Access permission to the generated manifest (idempotent).
-          MANIFEST=android/app/src/main/AndroidManifest.xml
-          grep -q PACKAGE_USAGE_STATS "$MANIFEST" || \
-            sed -i 's#<application#<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />\n    <application#' "$MANIFEST"
+          flutter create --org com.familyguard --project-name familyguard_child --platforms=android .
+          # Child app reads usage stats — add the special permission.
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q PACKAGE_USAGE_STATS "$M" || \
+            sed -i 's#<application#<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />\n    <application#' "$M"
           flutter pub get
           flutter build apk --release
-      - name: Rename artifact
-        run: cp client/build/app/outputs/flutter-apk/app-release.apk familyguard-${{ github.ref_name }}.apk
-      - name: Publish to Release
+      - run: cp client/apps/child/build/app/outputs/flutter-apk/app-release.apk familyguard-child-${{ github.ref_name }}.apk
+
+      - name: Build PARENT apk
+        working-directory: client/apps/parent
+        run: |
+          flutter create --org com.familyguard --project-name familyguard_parent --platforms=android .
+          flutter pub get
+          flutter build apk --release
+      - run: cp client/apps/parent/build/app/outputs/flutter-apk/app-release.apk familyguard-parent-${{ github.ref_name }}.apk
+
+      - name: Publish APKs to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: familyguard-${{ github.ref_name }}.apk
+          files: |
+            familyguard-child-${{ github.ref_name }}.apk
+            familyguard-parent-${{ github.ref_name }}.apk
           generate_release_notes: true
 
   windows:
-    name: Build Windows EXE
+    name: Build Windows EXEs
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Build Windows
-        working-directory: client
+
+      - name: Build CHILD windows
+        working-directory: client/apps/child
         run: |
-          flutter create --org com.familyguard --project-name familyguard --platforms=windows .
+          flutter create --org com.familyguard --project-name familyguard_child --platforms=windows .
           flutter pub get
           flutter build windows --release
-      - name: Zip artifact
+      - name: Zip CHILD
         shell: pwsh
-        run: Compress-Archive -Path client/build/windows/x64/runner/Release/* -DestinationPath familyguard-${{ github.ref_name }}-windows.zip
-      - name: Publish to Release
+        run: Compress-Archive -Path client/apps/child/build/windows/x64/runner/Release/* -DestinationPath familyguard-child-${{ github.ref_name }}-windows.zip
+
+      - name: Build PARENT windows
+        working-directory: client/apps/parent
+        run: |
+          flutter create --org com.familyguard --project-name familyguard_parent --platforms=windows .
+          flutter pub get
+          flutter build windows --release
+      - name: Zip PARENT
+        shell: pwsh
+        run: Compress-Archive -Path client/apps/parent/build/windows/x64/runner/Release/* -DestinationPath familyguard-parent-${{ github.ref_name }}-windows.zip
+
+      - name: Publish EXEs to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: familyguard-${{ github.ref_name }}-windows.zip
+          files: |
+            familyguard-child-${{ github.ref_name }}-windows.zip
+            familyguard-parent-${{ github.ref_name }}-windows.zip
           generate_release_notes: true

@@ -7,11 +7,28 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 ## [Unreleased]
 
 ### Planned (see docs/ROADMAP.md — Phase 2)
+
 - AI keyword / sentiment alerts
 - Reward system
 - Remote commands (lock now / send message)
 - Native OS collectors (Android UsageStatsManager, Windows foreground sampling)
 - Postgres persistence + push notifications
+
+## [0.3.0] - 2026-11-07
+
+### Changed
+- **Restructured into a monorepo with two apps.** Replaced the single role-switch
+  app with `client/packages/core` (shared models, API client, auth, consent) plus
+  `client/apps/child` and `client/apps/parent`, mirroring real parental-control
+  products (e.g. Google Family Link).
+
+### Added
+- **Child app** — consent gate, native app-usage tracking, location sharing,
+  SOS button, and the two-way transparency screen.
+- **Parent app** — dashboard/reports, children, screen-time limit, app blocking,
+  web filter, geofencing, bedtime, and an alerts inbox.
+- Release pipeline now builds four artifacts (child/parent × Android/Windows);
+  CI analyzes the core package and both apps.
 
 ## [0.2.0] - 2026-11-07
 
@@ -33,6 +50,7 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
   (APK + Windows EXE published to GitHub Releases on each `v*` tag).
 - Docs: README, ARCHITECTURE, ROADMAP, ETHICS, ADDING_A_FEATURE, RELEASING.
 
-[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/hamxa8769/familyguard/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.3.0
 [0.2.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.2.0
 [0.1.0]: https://github.com/hamxa8769/familyguard/releases/tag/v0.1.0

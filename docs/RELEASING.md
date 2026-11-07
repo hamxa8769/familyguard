@@ -1,42 +1,46 @@
 # Releasing
 
-The app updates through **versioned GitHub Releases**, built automatically by CI.
-You never build the APK/EXE by hand — pushing a version tag does it.
+The apps update through **versioned GitHub Releases**, built automatically by CI.
+You never build by hand — pushing a version tag builds everything.
 
-## How versioning works
+## What a release contains
 
-- Source of truth for a release is the **git tag** `vMAJOR.MINOR.PATCH` (e.g. `v0.2.0`).
-- `client/pubspec.yaml` holds `version: X.Y.Z+BUILD`. Bump it to match the tag.
-- Follow [SemVer](https://semver.org/):
-  - **PATCH** (`v0.1.1`) — bug fixes.
-  - **MINOR** (`v0.2.0`) — new feature, backward compatible.
-  - **MAJOR** (`v1.0.0`) — breaking change.
+Each `vX.Y.Z` tag publishes **four** artifacts:
 
-## Cut a release (one app, continuously updated)
+- `familyguard-child-vX.Y.Z.apk` — child app, Android
+- `familyguard-parent-vX.Y.Z.apk` — parent app, Android
+- `familyguard-child-vX.Y.Z-windows.zip` — child app, Windows
+- `familyguard-parent-vX.Y.Z-windows.zip` — parent app, Windows
+
+Install the **child** app on the child's device and the **parent** app on yours.
+
+## Versioning
+
+- The git tag `vMAJOR.MINOR.PATCH` drives the release.
+- Keep both app versions in step: `client/apps/child/pubspec.yaml` and
+  `client/apps/parent/pubspec.yaml` (`version: X.Y.Z+BUILD`).
+- [SemVer](https://semver.org/): PATCH = fixes, MINOR = new feature, MAJOR = breaking.
+
+## Cut a release
 
 ```bash
-# 1. Finish your changes and update the CHANGELOG [Unreleased] section.
-# 2. Bump the version in client/pubspec.yaml (e.g. 0.2.0+2).
-git add -A && git commit -m "Release v0.2.0"
+# 1. Update CHANGELOG [Unreleased]; bump version in both apps' pubspec.yaml.
+git add -A && git commit -m "Release v0.3.0"
 git push
 
-# 3. Tag and push the tag — this triggers the release build.
-git tag v0.2.0
-git push origin v0.2.0
+# 2. Tag and push the tag — this triggers the build.
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
-CI (`.github/workflows/release.yml`) then:
-1. Builds the **Android APK** on an Ubuntu runner.
-2. Builds the **Windows EXE** (zipped) on a Windows runner.
-3. Creates a GitHub **Release** for the tag and attaches both artifacts.
-
-Download links appear at:
+CI (`.github/workflows/release.yml`) then builds both apps for Android + Windows
+and attaches all four artifacts to the release at:
 `https://github.com/hamxa8769/familyguard/releases`
 
 ## Continuous checks
 
 Every push / PR runs `.github/workflows/ci.yml`:
-- `flutter analyze` on the client.
+- `flutter analyze` on `packages/core`, `apps/child`, and `apps/parent`.
 - Node syntax check on the backend.
 
 Keep `main` green; cut a tag only from a green commit.

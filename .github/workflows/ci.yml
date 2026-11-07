@@ -7,24 +7,23 @@ on:
     branches: [main]
 
 jobs:
-  client-analyze:
-    name: Flutter analyze
+  analyze:
+    name: Flutter analyze (core + apps)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Generate platform folders
-        working-directory: client
-        run: flutter create --org com.familyguard --project-name familyguard --platforms=android,windows .
-      - name: Install dependencies
-        working-directory: client
-        run: flutter pub get
-      - name: Analyze
-        working-directory: client
-        # Only real errors fail CI; style infos/warnings do not.
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Analyze shared core
+        working-directory: client/packages/core
+        run: flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Analyze child app
+        working-directory: client/apps/child
+        run: flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Analyze parent app
+        working-directory: client/apps/parent
+        run: flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings
 
   backend-check:
     name: Backend syntax check

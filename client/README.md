@@ -1,34 +1,40 @@
-# FamilyGuard Client (Flutter)
+# FamilyGuard Client (Flutter monorepo)
 
-One Flutter app for **Windows, Android, and iOS**, running in either a `parent`
-or `child` role.
+Two apps that share one core package.
+
+```
+client/
+├── packages/core/   familyguard_core — models, API client, auth, consent
+└── apps/
+    ├── child/        familyguard_child — on the child's device
+    └── parent/       familyguard_parent — on the parent's device
+```
+
+Apps depend on the core via a path dependency, e.g. in `apps/child/pubspec.yaml`:
+
+```yaml
+dependencies:
+  familyguard_core:
+    path: ../../packages/core
+```
 
 ## Run
 
 ```bash
-cd client
-flutter pub get
-flutter run -d windows   # or: -d android / -d ios / chrome
+# Parent app
+cd client/apps/parent && flutter pub get && flutter run -d windows
+
+# Child app (real usage data on Android)
+cd client/apps/child && flutter pub get && flutter run -d android
 ```
 
-## Structure (feature-first)
+## Analyze (what CI runs)
 
+```bash
+cd client/packages/core && flutter pub get && flutter analyze
+cd client/apps/child    && flutter pub get && flutter analyze
+cd client/apps/parent   && flutter pub get && flutter analyze
 ```
-lib/
-├── core/        config, network, auth, consent — cross-cutting base
-├── features/    one folder per feature; each implements FeatureModule
-└── shared/      reusable widgets/utils
-```
 
-## Add a new feature
-
-1. Create `lib/features/<feature>/<feature>_module.dart` implementing `FeatureModule`.
-2. Add it to the list in `lib/features/feature_registry.dart`.
-
-The dashboard/menu builds itself from the registry, so nothing else changes.
-
-## Platform capabilities
-
-Data collectors (usage, location, etc.) are platform-specific. On platforms where
-an OS API is restricted (notably iOS), the collector degrades gracefully and the
-feature shows a "limited on this platform" state rather than failing.
+## Add a feature
+See [../docs/ADDING_A_FEATURE.md](../docs/ADDING_A_FEATURE.md).
