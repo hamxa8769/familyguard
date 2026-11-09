@@ -21,6 +21,29 @@ export async function addEvents(deviceId, events, { snapshot = false } = {}) {
   return normalised.length;
 }
 
+// Total seconds per local day for the last [days] days (oldest first),
+// including days with no data, for the weekly chart.
+export async function daily(deviceId, days = 7) {
+  const out = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = days - 1; i >= 0; i--) {
+    const start = new Date(today);
+    start.setDate(today.getDate() - i);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 1);
+    const totalSeconds = store.usageEvents
+      .filter((e) => {
+        if (e.deviceId !== deviceId) return false;
+        const t = new Date(e.startedAt);
+        return t >= start && t < end;
+      })
+      .reduce((sum, e) => sum + e.durationSeconds, 0);
+    out.push({ date: start.toISOString(), totalSeconds });
+  }
+  return out;
+}
+
 // Aggregates total seconds per app for a device.
 export async function summarise(deviceId) {
   const events = store.usageEvents.filter((e) => e.deviceId === deviceId);

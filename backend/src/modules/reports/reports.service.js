@@ -30,9 +30,13 @@ export function buildDeviceReport(deviceId) {
   };
 }
 
-// usage.service.summarise is async over the store; here we inline the sync form.
+// Today's usage only (the report is a daily summary).
 function summariseSync(deviceId) {
-  const events = store.usageEvents.filter((e) => e.deviceId === deviceId);
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const events = store.usageEvents.filter(
+    (e) => e.deviceId === deviceId && new Date(e.startedAt) >= startOfDay
+  );
   const byApp = {};
   let totalSeconds = 0;
   for (const e of events) {

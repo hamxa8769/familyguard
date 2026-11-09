@@ -4,6 +4,8 @@ import '../../common/widgets.dart';
 import '../../feature_module.dart';
 import '../../shell/settings_screen.dart';
 import '../../state/parent_state.dart';
+import '../../theme/app_theme.dart';
+import '../../ui/fg_widgets.dart';
 
 class AlertsModule implements FeatureModule {
   @override
@@ -20,23 +22,36 @@ class AlertsModule implements FeatureModule {
   Widget buildScreen(BuildContext context) => const AlertsScreen();
 }
 
+enum _Kind { sos, zone }
+
 class _Alert {
   _Alert({
+    required this.kind,
     required this.at,
     required this.title,
-    required this.icon,
+    required this.subtitle,
     this.sos,
   });
+  final _Kind kind;
   final DateTime at;
   final String title;
-  final IconData icon;
+  final String subtitle;
   final SosAlert? sos;
+
+  bool get open => sos != null && !sos!.resolved;
 }
 
-/// SOS alerts from all children + safe-zone events from every device.
-/// (Pull to refresh — push notifications are not wired up yet.)
-class AlertsScreen extends StatelessWidget {
+/// SOS alerts from all children + safe-zone events from every device,
+/// filterable and grouped by day. Pull to refresh (push comes later).
+class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
+
+  @override
+  State<AlertsScreen> createState() => _AlertsScreenState();
+}
+
+class _AlertsScreenState extends State<AlertsScreen> {
+  _Kind? _filter;
 
   Future<List<_Alert>> _load() async {
     final state = ParentState.instance;
@@ -44,27 +59,45 @@ class AlertsScreen extends StatelessWidget {
     final out = <_Alert>[];
 
     final sos = await api.get('/api/sos');
-    for (final a in (sos['alerts'] as List).map((e) => SosAlert.fromMap(e as Map))) {
+    for (final a
+        in (sos['alerts'] as List).map((e) => SosAlert.fromMap(e as Map))) {
       out.add(_Alert(
-        at: DateTime.tryParse(a.at) ?? DateTime(2000),
-        title: '${a.message} — ${state.labelFor(a.deviceId)}',
-        icon: Icons.sos,
+        kind: _Kind.sos,
+        at: (DateTime.tryParse(a.at) ?? DateTime(2000)).toLocal(),
+        title: a.message,
+        subtitle: state.labelFor(a.deviceId),
         sos: a,
       ));
     }
-    for (final (child, device) in state.devices) {
-      final ev = await api.get('/api/geofencing/${device.id}/events');
-      for (final e in ev['events'] as List) {
-        final verb = e['type'] == 'enter' ? 'arrived at' : 'left';
+    final devices = state.devices;
+    final events = await Future.wait([
+      for (final (_, d) in devices) api.get('/api/geofencing/${d.id}/events'),
+    ]);
+    for (var i = 0; i < devices.length; i++) {
+      final child = devices[i].$1;
+      for (final e in events[i]['events'] as List) {
+        final arrived = e['type'] == 'enter';
         out.add(_Alert(
-          at: DateTime.tryParse('${e['at']}') ?? DateTime(2000),
-          title: '${child.displayName} $verb ${e['zoneName']}',
-          icon: Icons.my_location,
+          kind: _Kind.zone,
+          at: (DateTime.tryParse('${e['at']}') ?? DateTime(2000)).toLocal(),
+          title:
+              '${child.displayName} ${arrived ? 'arrived at' : 'left'} ${e['zoneName']}',
+          subtitle: 'Safe zone',
         ));
       }
     }
     out.sort((a, b) => b.at.compareTo(a.at));
     return out;
+  }
+
+  String _dayLabel(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(d.year, d.month, d.day);
+    final diff = today.difference(day).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    return '${day.day}/${day.month}/${day.year}';
   }
 
   @override
@@ -76,38 +109,176 @@ class AlertsScreen extends StatelessWidget {
       ),
       body: ApiView<List<_Alert>>(
         load: _load,
-        builder: (context, alerts, reload) {
-          if (alerts.isEmpty) return const EmptyHint('No alerts.');
-          return ListView(
-            children: [
-              for (final a in alerts)
-                ListTile(
-                  leading: Icon(a.icon,
-                      color: a.sos != null && !a.sos!.resolved
-                          ? Colors.red
-                          : null),
-                  title: Text(a.title),
-                  subtitle: Text(timeAgo(a.at.toLocal())),
-                  trailing: a.sos == null
-                      ? null
-                      : a.sos!.resolved
-                          ? const Icon(Icons.check, color: Colors.green)
-                          : TextButton(
-                              onPressed: () async {
-                                final ok = await saveWithFeedback(
-                                  context,
-                                  () => ParentState.instance.api.post(
-                                      '/api/sos/${a.sos!.id}/resolve', {}),
-                                  'Marked as handled',
-                                );
-                                if (ok) reload();
-                              },
-                              child: const Text('Resolve'),
-                            ),
+        builder: (context, all, reload) {
+          final c = FgColors.of(context);
+          final alerts = _filter == null
+              ? all
+              : all.where((a) => a.kind == _filter).toList();
+          final openCount = all.where((a) => a.open).length;
+
+          final rows = <Widget>[
+            Wrap(
+              spacing: FgSpace.sm,
+              runSpacing: FgSpace.sm,
+              children: [
+                _FilterChip(
+                  label: 'All',
+                  selected: _filter == null,
+                  onTap: () => setState(() => _filter = null),
                 ),
-            ],
+                _FilterChip(
+                  label: openCount > 0 ? 'SOS · $openCount open' : 'SOS',
+                  selected: _filter == _Kind.sos,
+                  color: c.danger,
+                  onTap: () => setState(() => _filter = _Kind.sos),
+                ),
+                _FilterChip(
+                  label: 'Safe zones',
+                  selected: _filter == _Kind.zone,
+                  color: c.safe,
+                  onTap: () => setState(() => _filter = _Kind.zone),
+                ),
+              ],
+            ),
+          ];
+
+          if (alerts.isEmpty) {
+            rows.add(Padding(
+              padding: const EdgeInsets.only(top: FgSpace.xl),
+              child: Column(
+                children: [
+                  IconWell(Icons.notifications_off_outlined,
+                      color: c.textMuted, size: 56),
+                  const SizedBox(height: FgSpace.md),
+                  Text('All quiet',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  Text('SOS and safe-zone alerts show up here.',
+                      style: TextStyle(color: c.textMuted)),
+                ],
+              ),
+            ));
+          }
+
+          String? lastDay;
+          for (final a in alerts) {
+            final day = _dayLabel(a.at);
+            if (day != lastDay) {
+              rows.add(SectionLabel(day));
+              lastDay = day;
+            }
+            rows.add(Padding(
+              padding: const EdgeInsets.only(bottom: FgSpace.sm),
+              child: _AlertCard(alert: a, onResolved: reload),
+            ));
+          }
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(
+                FgSpace.lg, FgSpace.sm, FgSpace.lg, FgSpace.xl),
+            children: rows,
           );
         },
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.color,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = FgColors.of(context);
+    final col = color ?? c.accent;
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? c.tint(col) : c.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? col : c.border),
+        ),
+        child: Text(label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              color: selected ? col : c.text,
+            )),
+      ),
+    );
+  }
+}
+
+class _AlertCard extends StatelessWidget {
+  const _AlertCard({required this.alert, required this.onResolved});
+  final _Alert alert;
+  final VoidCallback onResolved;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = FgColors.of(context);
+    final isSos = alert.kind == _Kind.sos;
+    final color = isSos ? (alert.open ? c.danger : c.textMuted) : c.safe;
+    final t = TimeOfDay.fromDateTime(alert.at).format(context);
+
+    return FgCard(
+      padding: const EdgeInsets.all(FgSpace.md),
+      color: alert.open ? c.tint(c.danger) : null,
+      borderColor: alert.open ? c.danger : null,
+      child: Row(
+        children: [
+          IconWell(isSos ? Icons.sos_rounded : Icons.shield_moon_outlined,
+              color: color),
+          const SizedBox(width: FgSpace.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(alert.title,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: alert.open ? c.danger : c.text)),
+                const SizedBox(height: 2),
+                Text('$t · ${alert.subtitle}',
+                    style: TextStyle(color: c.textMuted, fontSize: 12)),
+              ],
+            ),
+          ),
+          if (isSos)
+            alert.open
+                ? FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.danger,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onPressed: () async {
+                      final ok = await saveWithFeedback(
+                        context,
+                        () => ParentState.instance.api
+                            .post('/api/sos/${alert.sos!.id}/resolve', {}),
+                        'Marked as handled',
+                      );
+                      if (ok) onResolved();
+                    },
+                    child: const Text('Resolve'),
+                  )
+                : Icon(Icons.check_circle_outline_rounded, color: c.safe),
+        ],
       ),
     );
   }

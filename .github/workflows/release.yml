@@ -29,8 +29,10 @@ jobs:
           flutter create --org com.familyguard --project-name familyguard_child --platforms=android .
           # Child app reads usage stats, contacts and SMS — add the permissions.
           M=android/app/src/main/AndroidManifest.xml
-          PERMS='<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />\n    <uses-permission android:name="android.permission.READ_CONTACTS" />\n    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.READ_CALL_LOG" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    '
+          PERMS='<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />\n    <uses-permission android:name="android.permission.READ_CONTACTS" />\n    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.READ_CALL_LOG" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    '
           grep -q READ_MEDIA_IMAGES "$M" || sed -i "s#<application#${PERMS}<application#" "$M"
+          # Release builds block plain http:// by default; the dev/LAN server uses it.
+          grep -q usesCleartextTraffic "$M" || sed -i 's#<application#<application android:usesCleartextTraffic="true"#' "$M"
           flutter pub get
           flutter build apk --release
       - run: cp client/apps/child/build/app/outputs/flutter-apk/app-release.apk familyguard-child-${{ github.ref_name }}.apk
@@ -39,6 +41,10 @@ jobs:
         working-directory: client/apps/parent
         run: |
           flutter create --org com.familyguard --project-name familyguard_parent --platforms=android .
+          # Release manifests have no INTERNET permission by default (API + map tiles need it).
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q android.permission.INTERNET "$M" || sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET" />\n    <application#' "$M"
+          grep -q usesCleartextTraffic "$M" || sed -i 's#<application#<application android:usesCleartextTraffic="true"#' "$M"
           flutter pub get
           flutter build apk --release
       - run: cp client/apps/parent/build/app/outputs/flutter-apk/app-release.apk familyguard-parent-${{ github.ref_name }}.apk

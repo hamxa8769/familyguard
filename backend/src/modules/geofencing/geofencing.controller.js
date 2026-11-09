@@ -1,4 +1,5 @@
 import { store, nextId } from '../../config/store.js';
+import { canAccessDevice } from '../../middleware/access.js';
 
 export async function createZone(req, res, next) {
   try {
@@ -36,6 +37,22 @@ export async function listEvents(req, res, next) {
       .filter((e) => e.deviceId === req.params.deviceId)
       .slice(-50);
     res.json({ deviceId: req.params.deviceId, events });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Parent removes a zone (and its event history).
+export async function deleteZone(req, res, next) {
+  try {
+    const zone = store.geofences.find((z) => z.id === req.params.id);
+    const device = zone && store.devices.find((d) => d.id === zone.deviceId);
+    if (!zone || !canAccessDevice(req.user, device, { parentOnly: true })) {
+      return res.status(404).json({ error: 'Zone not found' });
+    }
+    store.geofences = store.geofences.filter((z) => z.id !== zone.id);
+    store.geofenceEvents = store.geofenceEvents.filter((e) => e.geofenceId !== zone.id);
+    res.json({ deleted: zone.id });
   } catch (err) {
     next(err);
   }

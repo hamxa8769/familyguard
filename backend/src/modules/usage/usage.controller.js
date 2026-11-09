@@ -13,6 +13,15 @@ export async function reportUsage(req, res, next) {
   }
 }
 
+export async function getDaily(req, res, next) {
+  try {
+    const days = Math.min(Math.max(Number(req.query.days) || 7, 1), 31);
+    res.json({ deviceId: req.params.deviceId, days: await usageService.daily(req.params.deviceId, days) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getUsage(req, res, next) {
   try {
     const summary = await usageService.summarise(req.params.deviceId);

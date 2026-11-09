@@ -6,6 +6,24 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added (UI/UX Phase 2 — parent app)
+- App usage: 7-day bar chart (days over the limit in red, limit line),
+  today / average / limit stats, per-app breakdown (`fl_chart`).
+- Location: OpenStreetMap map (`flutter_map`, dark tiles in dark mode) with
+  current position, recent trail and safe-zone circles.
+- Safe zones: tap the map to place a zone, size it with a slider, remove zones.
+- Alerts: All / SOS / Safe-zone filters, grouped by day, inline Resolve.
+- Screen time (ring + presets) and Bedtime (start/end tiles) redesigned.
+- Family: pairing QR code (`qr_flutter`) with server URL + code for the
+  child app; device rows show last-seen status.
+- Backend: `GET /api/usage/:deviceId/daily`, `DELETE /api/geofencing/zone/:id`.
+
+### Fixed
+- Daily report counted usage from all days as "today".
+- Release APKs had no INTERNET permission and blocked plain http://, so they
+  could not reach the server (or load map tiles). The release workflow now adds
+  INTERNET and allows cleartext for the LAN/dev server.
+
 ### Added (UI/UX Phase 1 — parent app)
 - Design system: dark-first theme with light/auto mode, colour tokens
   (accent + safe/warn/danger only), spacing scale, flat GPU-cheap surfaces.
