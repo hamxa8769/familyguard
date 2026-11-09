@@ -24,6 +24,7 @@ export async function pairDevice(req, res, next) {
       platform,
       deviceName: deviceName || `${platform}-device`,
       registeredAt: new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
     };
     store.devices.push(device);
     // Codes are single-use; issue a fresh one for the next device.

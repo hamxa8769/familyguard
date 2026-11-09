@@ -8,6 +8,8 @@ class GeofencingModule implements FeatureModule {
   @override
   String get id => 'geofencing';
   @override
+  FeatureSection get section => FeatureSection.rules;
+  @override
   String get title => 'Safe Zones';
   @override
   String get description => 'Alerts when entering/leaving a zone';

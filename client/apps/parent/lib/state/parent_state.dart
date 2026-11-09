@@ -74,7 +74,36 @@ class ParentState extends ChangeNotifier {
     await refresh();
   }
 
+  // ---- Per-device report cache (stale-while-revalidate) ----
+  final Map<String, Map> _reports = {};
+  final Set<String> _reportLoading = {};
+  final Map<String, String> _reportErrors = {};
+
+  /// Last report we have for [deviceId] (shown instantly, then refreshed).
+  Map? reportFor(String deviceId) => _reports[deviceId];
+  bool reportLoading(String deviceId) => _reportLoading.contains(deviceId);
+  String? reportError(String deviceId) => _reportErrors[deviceId];
+
+  Future<void> loadReport(String deviceId) async {
+    if (_reportLoading.contains(deviceId)) return;
+    _reportLoading.add(deviceId);
+    notifyListeners();
+    try {
+      final res = await api.get('/api/reports/$deviceId');
+      _reports[deviceId] = res as Map;
+      _reportErrors.remove(deviceId);
+    } on ApiException catch (e) {
+      _reportErrors[deviceId] = e.message;
+      if (e.isUnauthorized) unauthorized = true;
+    } finally {
+      _reportLoading.remove(deviceId);
+      notifyListeners();
+    }
+  }
+
   void clear() {
+    _reports.clear();
+    _reportErrors.clear();
     children = const [];
     _selectedDeviceId = null;
     error = null;

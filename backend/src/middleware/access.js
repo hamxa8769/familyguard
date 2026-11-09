@@ -20,6 +20,8 @@ export function requireDeviceAccess({ parentOnly = false } = {}) {
     if (!canAccessDevice(req.user, device, { parentOnly })) {
       return res.status(403).json({ error: 'No access to this device' });
     }
+    // Heartbeat: any request from the device itself marks it as seen.
+    if (req.user.role === 'device') device.lastSeenAt = new Date().toISOString();
     req.device = device;
     next();
   };

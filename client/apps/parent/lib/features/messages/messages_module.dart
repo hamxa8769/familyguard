@@ -8,6 +8,8 @@ class MessagesModule implements FeatureModule {
   @override
   String get id => 'messages';
   @override
+  FeatureSection get section => FeatureSection.activity;
+  @override
   String get title => 'Messages & Contacts';
   @override
   String get description => 'View the child\'s SMS and contacts';

@@ -7,6 +7,8 @@ class ScreenTimeModule implements FeatureModule {
   @override
   String get id => 'screen_time';
   @override
+  FeatureSection get section => FeatureSection.rules;
+  @override
   String get title => 'Screen Time';
   @override
   String get description => 'Set a daily usage limit';

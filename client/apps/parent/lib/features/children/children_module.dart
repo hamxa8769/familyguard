@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:familyguard_core/familyguard_core.dart';
 import '../../common/widgets.dart';
 import '../../feature_module.dart';
+import '../../shell/settings_screen.dart';
 import '../../state/parent_state.dart';
 
 class ChildrenModule implements FeatureModule {
   @override
   String get id => 'children';
+  @override
+  FeatureSection get section => FeatureSection.family;
   @override
   String get title => 'My Children';
   @override
@@ -36,7 +39,10 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Children')),
+      appBar: AppBar(
+        title: const Text('Family'),
+        actions: const [SettingsButton()],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addChild,
         icon: const Icon(Icons.person_add),

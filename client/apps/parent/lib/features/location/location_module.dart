@@ -8,6 +8,8 @@ class LocationModule implements FeatureModule {
   @override
   String get id => 'location';
   @override
+  FeatureSection get section => FeatureSection.activity;
+  @override
   String get title => 'Location';
   @override
   String get description => 'Current location and recent history';

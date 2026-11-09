@@ -7,6 +7,8 @@ class CallLogModule implements FeatureModule {
   @override
   String get id => 'call_log';
   @override
+  FeatureSection get section => FeatureSection.activity;
+  @override
   String get title => 'Call Log';
   @override
   String get description => 'View the child\'s call history';

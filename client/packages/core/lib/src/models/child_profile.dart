@@ -34,6 +34,7 @@ class DeviceInfo {
     required this.childId,
     required this.platform,
     required this.deviceName,
+    this.lastSeenAt,
   });
 
   final String id;
@@ -41,10 +42,14 @@ class DeviceInfo {
   final String platform;
   final String deviceName;
 
+  /// Last time the device talked to the server (its sync heartbeat).
+  final DateTime? lastSeenAt;
+
   factory DeviceInfo.fromMap(Map<dynamic, dynamic> map) => DeviceInfo(
         id: map['id'].toString(),
         childId: (map['childId'] ?? '').toString(),
         platform: (map['platform'] ?? '').toString(),
         deviceName: (map['deviceName'] ?? '').toString(),
+        lastSeenAt: DateTime.tryParse('${map['lastSeenAt'] ?? ''}'),
       );
 }

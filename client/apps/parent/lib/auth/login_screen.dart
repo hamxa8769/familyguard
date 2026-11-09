@@ -74,11 +74,13 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: _name,
               decoration: const InputDecoration(labelText: 'Your name'),
             ),
+          if (_register) const SizedBox(height: 12),
           TextField(
             controller: _email,
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(labelText: 'Email'),
           ),
+          const SizedBox(height: 12),
           TextField(
             controller: _password,
             obscureText: true,

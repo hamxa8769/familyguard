@@ -8,6 +8,8 @@ class GalleryModule implements FeatureModule {
   @override
   String get id => 'gallery';
   @override
+  FeatureSection get section => FeatureSection.activity;
+  @override
   String get title => 'Gallery & Files';
   @override
   String get description => 'Photos and files on the child\'s device';

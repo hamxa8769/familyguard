@@ -7,6 +7,8 @@ class AppBlockingModule implements FeatureModule {
   @override
   String get id => 'app_blocking';
   @override
+  FeatureSection get section => FeatureSection.rules;
+  @override
   String get title => 'App Blocking';
   @override
   String get description => 'Choose which apps to block';

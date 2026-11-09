@@ -6,6 +6,19 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added (UI/UX Phase 1 — parent app)
+- Design system: dark-first theme with light/auto mode, colour tokens
+  (accent + safe/warn/danger only), spacing scale, flat GPU-cheap surfaces.
+- Shared widgets: animated screen-time ring, usage bars, pulsing status dot,
+  skeleton loaders, quick actions, feature tiles.
+- 5-tab navigation (Home, Activity, Rules, Alerts, Family) built from the
+  feature registry; Settings screen with theme switch and sign out.
+- New Home: child switcher, live device status, SOS banner, screen-time ring
+  with top apps, location / safe-zone card, quick actions, rules summary.
+  Shows the cached report instantly and refreshes every minute.
+- Backend: devices report a `lastSeenAt` heartbeat.
+
+
 ### Added
 - **Apps connected to the backend.** Parent sign-in/sign-up; children with
   single-use pairing codes; child app pairs with the code, records consent on

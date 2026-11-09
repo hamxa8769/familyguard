@@ -8,11 +8,13 @@ class DashboardModule implements FeatureModule {
   @override
   String get id => 'dashboard';
   @override
-  String get title => 'Dashboard';
+  FeatureSection get section => FeatureSection.activity;
   @override
-  String get description => 'Daily summary for your child';
+  String get title => 'App usage';
   @override
-  IconData get icon => Icons.dashboard;
+  String get description => 'Apps and screen time today';
+  @override
+  IconData get icon => Icons.bar_chart_rounded;
   @override
   Widget buildScreen(BuildContext context) => const DashboardScreen();
 }

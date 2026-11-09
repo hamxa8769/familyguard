@@ -7,6 +7,8 @@ class BedtimeModule implements FeatureModule {
   @override
   String get id => 'bedtime';
   @override
+  FeatureSection get section => FeatureSection.rules;
+  @override
   String get title => 'Bedtime';
   @override
   String get description => 'Lock the device at night';

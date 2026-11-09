@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
 import '../../common/widgets.dart';
 import '../../feature_module.dart';
+import '../../shell/settings_screen.dart';
 import '../../state/parent_state.dart';
 
 class AlertsModule implements FeatureModule {
   @override
   String get id => 'alerts';
+  @override
+  FeatureSection get section => FeatureSection.alerts;
   @override
   String get title => 'Alerts';
   @override
@@ -67,7 +70,10 @@ class AlertsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Alerts')),
+      appBar: AppBar(
+        title: const Text('Alerts'),
+        actions: const [SettingsButton()],
+      ),
       body: ApiView<List<_Alert>>(
         load: _load,
         builder: (context, alerts, reload) {

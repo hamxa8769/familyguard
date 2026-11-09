@@ -7,6 +7,8 @@ class WebFilterModule implements FeatureModule {
   @override
   String get id => 'web_filter';
   @override
+  FeatureSection get section => FeatureSection.rules;
+  @override
   String get title => 'Web Filter';
   @override
   String get description => 'Block unsafe websites';
