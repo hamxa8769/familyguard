@@ -6,6 +6,27 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added
+- **Apps connected to the backend.** Parent sign-in/sign-up; children with
+  single-use pairing codes; child app pairs with the code, records consent on
+  the server and syncs usage, location, SMS/contacts/call log and file metadata
+  (on start, every 15 min while open, and "Sync now"). SOS is sent for real.
+- Every parent screen now reads/writes real data for the selected child device
+  (dashboard, location, screen time, app blocking, web filter, safe zones,
+  bedtime, messages, call log, gallery, alerts with resolve). Sample data removed.
+- Child "What My Parent Sees" loads the actual parent-side report.
+
+### Security
+- Device-level access control: only the owning parent or the device itself can
+  read a device's data; only the parent can change its rules. SOS list is
+  filtered per parent (previously returned every family's alerts).
+
+### Fixed
+- Usage sync no longer double-counts (today's totals are replaced, not appended).
+- JSON body limit raised to 5 MB so SMS/contacts/gallery syncs aren't rejected.
+- `.gitignore` paths updated for the monorepo layout.
+
+
 ### Planned (see docs/ROADMAP.md — Phase 2)
 
 - AI keyword / sentiment alerts

@@ -3,12 +3,15 @@ node_modules/
 backend/.env
 
 # Flutter
-client/.dart_tool/
-client/build/
-client/.flutter-plugins
-client/.flutter-plugins-dependencies
-client/.packages
-client/pubspec.lock
+# (any package/app under client/ — paths predate the monorepo split)
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+local.properties
+**/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 
 # Editors / OS
 .idea/

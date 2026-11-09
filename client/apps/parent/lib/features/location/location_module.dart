@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:familyguard_core/familyguard_core.dart';
+import '../../common/widgets.dart';
 import '../../feature_module.dart';
+import '../../state/parent_state.dart';
 
 class LocationModule implements FeatureModule {
   @override
@@ -19,42 +22,55 @@ class LocationViewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sample data; real points from GET /api/location/:deviceId (synced from child).
-    const history = [
-      ('Now', 'Home', '31.52040, 74.35870'),
-      ('1h ago', 'School', '31.51000, 74.34500'),
-      ('3h ago', 'Park', '31.53000, 74.37000'),
-    ];
-    return Scaffold(
-      appBar: AppBar(title: const Text('Location')),
-      body: Column(
-        children: [
-          Container(
-            height: 180,
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(
-              child: Text('Map placeholder\n(integrate google_maps_flutter)',
-                  textAlign: TextAlign.center),
-            ),
-          ),
-          Expanded(
-            child: ListView(
+    return DeviceScoped(
+      title: 'Location',
+      builder: (context, deviceId) => Scaffold(
+        appBar: AppBar(title: const Text('Location')),
+        body: ApiView<List<LocationPoint>>(
+          load: () async {
+            final res = await ParentState.instance.api
+                .get('/api/location/$deviceId');
+            return (res['history'] as List)
+                .map((p) => LocationPoint.fromServer(p as Map))
+                .whereType<LocationPoint>()
+                .toList()
+                .reversed
+                .toList();
+          },
+          builder: (context, points, _) {
+            if (points.isEmpty) {
+              return const EmptyHint(
+                  'No location shared yet. It is sent when the child app is '
+                  'open and location permission is allowed.');
+            }
+            final current = points.first;
+            return ListView(
               children: [
-                for (final (time, place, coords) in history)
+                Card(
+                  margin: const EdgeInsets.all(16),
+                  child: ListTile(
+                    leading: const Icon(Icons.my_location, size: 36),
+                    title: Text(
+                        '${current.lat.toStringAsFixed(5)}, ${current.lng.toStringAsFixed(5)}'),
+                    subtitle: Text('Current • ${timeAgo(current.time)}'),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text('Recent history',
+                      style: Theme.of(context).textTheme.titleMedium),
+                ),
+                for (final p in points.skip(1))
                   ListTile(
                     leading: const Icon(Icons.place_outlined),
-                    title: Text(place),
-                    subtitle: Text(coords),
-                    trailing: Text(time),
+                    title: Text(
+                        '${p.lat.toStringAsFixed(5)}, ${p.lng.toStringAsFixed(5)}'),
+                    trailing: Text(timeAgo(p.time)),
                   ),
               ],
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }

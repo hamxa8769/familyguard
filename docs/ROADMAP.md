@@ -54,6 +54,10 @@ This is the honest, demonstrable scope for a cross-platform project.
 
 ## Phase 3 — Hardening
 
+- [x] Apps wired to the API (auth, pairing, sync, all parent screens)
+- [x] Device-level access control
+- [ ] Background sync when the child app is closed
+- [ ] On-device enforcement (app block, bedtime, limit, web filter)
 - [ ] Postgres migrations + real persistence
 - [ ] Automated tests (backend + widget tests)
 - [ ] CI (GitHub Actions)

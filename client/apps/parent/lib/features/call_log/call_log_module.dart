@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../common/widgets.dart';
 import '../../feature_module.dart';
+import '../messages/messages_module.dart';
 
 class CallLogModule implements FeatureModule {
   @override
@@ -17,27 +19,43 @@ class CallLogModule implements FeatureModule {
 class CallLogViewScreen extends StatelessWidget {
   const CallLogViewScreen({super.key});
 
+  IconData _icon(int type) => switch (type) {
+        2 => Icons.call_made,
+        3 => Icons.call_missed,
+        _ => Icons.call_received,
+      };
+
+  String _duration(int seconds) {
+    if (seconds <= 0) return '—';
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return m > 0 ? '${m}m ${s}s' : '${s}s';
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Sample data; real data from GET /api/comms/:deviceId (synced from child).
-    const calls = [
-      ('+92 300 1234567', 'Incoming', '14:05', '1m 35s', Icons.call_received),
-      ('+92 301 7654321', 'Outgoing', '12:40', '—', Icons.call_made),
-      ('+92 42 111222333', 'Missed', 'Yesterday', '—', Icons.call_missed),
-    ];
-    return Scaffold(
-      appBar: AppBar(title: const Text('Call Log')),
-      body: ListView(
-        children: [
-          for (final (number, type, time, duration, icon) in calls)
-            ListTile(
-              leading: Icon(icon,
-                  color: type == 'Missed' ? Colors.red : null),
-              title: Text(number),
-              subtitle: Text('$type • $time'),
-              trailing: Text(duration),
-            ),
-        ],
+    return DeviceScoped(
+      title: 'Call Log',
+      builder: (context, deviceId) => Scaffold(
+        appBar: AppBar(title: const Text('Call Log')),
+        body: ApiView<CommsData>(
+          load: () => CommsData.load(deviceId),
+          builder: (context, data, _) => data.calls.isEmpty
+              ? const EmptyHint('No call history shared yet (Android only, '
+                  'after the child allows call-log access).')
+              : ListView(
+                  children: [
+                    for (final c in data.calls)
+                      ListTile(
+                        leading: Icon(_icon(c.type),
+                            color: c.type == 3 ? Colors.red : null),
+                        title: Text(c.number),
+                        subtitle: Text('${c.typeLabel} • ${timeAgo(c.date)}'),
+                        trailing: Text(_duration(c.durationSeconds)),
+                      ),
+                  ],
+                ),
+        ),
       ),
     );
   }

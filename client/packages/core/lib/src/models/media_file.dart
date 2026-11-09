@@ -22,6 +22,15 @@ class MediaFile {
     return '$sizeBytes B';
   }
 
+  /// Metadata only — file bytes are never uploaded.
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'path': path,
+        'size': sizeBytes,
+        'date': dateMillis,
+        'isImage': isImage,
+      };
+
   factory MediaFile.fromMap(Map<dynamic, dynamic> map) => MediaFile(
         name: (map['name'] ?? '').toString(),
         path: (map['path'] ?? '').toString(),

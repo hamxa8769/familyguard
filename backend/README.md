@@ -21,11 +21,21 @@ Server starts on `http://localhost:4000`. Health check: `GET /health`.
 
 That's it — nothing else changes.
 
+## Access rules
+
+- A **parent** signs in with email/password and adds children (`POST /api/children`);
+  each child gets a single-use 6-character `pairingCode`.
+- The **child app** sends that code to `POST /api/pair` and gets a token scoped to
+  that one device (role `device`).
+- Every device route checks `middleware/access.js`: only the owning parent or the
+  device itself may read its data, and only the parent may change its rules.
+
 ## Modules included
 
 | Module    | Purpose                                            |
 |-----------|----------------------------------------------------|
 | `auth`    | Register / login, JWT issue.                       |
 | `consent` | Record and check on-device consent (transparency). |
-| `devices` | Register child/parent devices.                     |
+| `pairing` | Child device redeems a one-time code → device token. |
+| `devices` | List the devices the caller may see.               |
 | `usage`   | Receive and query app-usage events.                |

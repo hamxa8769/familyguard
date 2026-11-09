@@ -1,11 +1,20 @@
 import { store, nextId } from '../../config/store.js';
 
-export async function addEvents(deviceId, events) {
+// snapshot: the device sends cumulative totals for today (Android
+// UsageStatsManager), so replace today's rows rather than double-counting.
+export async function addEvents(deviceId, events, { snapshot = false } = {}) {
+  if (snapshot) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    store.usageEvents = store.usageEvents.filter(
+      (e) => e.deviceId !== deviceId || new Date(e.startedAt) < startOfDay
+    );
+  }
   const normalised = events.map((e) => ({
     id: nextId(),
     deviceId,
     appName: e.appName,
-    startedAt: e.startedAt,
+    startedAt: e.startedAt || new Date().toISOString(),
     durationSeconds: Number(e.durationSeconds) || 0,
   }));
   store.usageEvents.push(...normalised);

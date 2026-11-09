@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:familyguard_core/familyguard_core.dart';
+import '../../common/widgets.dart';
 import '../../feature_module.dart';
+import '../../state/parent_state.dart';
 
 class GalleryModule implements FeatureModule {
   @override
@@ -19,49 +22,62 @@ class GalleryViewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sample metadata; real list from GET /api/files/:deviceId (synced from child).
-    // Thumbnails require syncing image bytes — a TODO (metadata only for now).
-    const files = [
-      ('photo_1.jpg', '2.3 MB', 'Today 14:05', true),
-      ('screenshot.png', '825 KB', 'Today 10:12', true),
-      ('selfie.jpg', '1.8 MB', 'Yesterday', true),
-      ('notes.pdf', '120 KB', '2 days ago', false),
-    ];
-    return Scaffold(
-      appBar: AppBar(title: const Text('Gallery & Files')),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(8),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+    // Metadata only (name, size, date) — image bytes are not uploaded.
+    return DeviceScoped(
+      title: 'Gallery & Files',
+      builder: (context, deviceId) => Scaffold(
+        appBar: AppBar(title: const Text('Gallery & Files')),
+        body: ApiView<List<MediaFile>>(
+          load: () async {
+            final res =
+                await ParentState.instance.api.get('/api/files/$deviceId');
+            return (res['items'] as List)
+                .map((e) => MediaFile.fromMap(e as Map))
+                .toList()
+              ..sort((a, b) => b.dateMillis.compareTo(a.dateMillis));
+          },
+          builder: (context, files, _) {
+            if (files.isEmpty) {
+              return const EmptyHint('No files shared yet.');
+            }
+            return GridView.builder(
+              padding: const EdgeInsets.all(8),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: files.length,
+              itemBuilder: (context, i) {
+                final f = files[i];
+                return Container(
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(f.isImage ? Icons.image : Icons.insert_drive_file,
+                          size: 32),
+                      const SizedBox(height: 6),
+                      Text(f.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11)),
+                      Text('${f.sizeLabel} • ${timeAgo(f.date)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 9)),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         ),
-        itemCount: files.length,
-        itemBuilder: (context, i) {
-          final (name, size, whenLabel, isImage) = files[i];
-          return Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.all(6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(isImage ? Icons.image : Icons.insert_drive_file, size: 32),
-                const SizedBox(height: 6),
-                Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11)),
-                Text('$size • $whenLabel',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 9)),
-              ],
-            ),
-          );
-        },
       ),
     );
   }

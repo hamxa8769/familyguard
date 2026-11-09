@@ -17,6 +17,9 @@ class SmsMessage {
 
   DateTime get date => DateTime.fromMillisecondsSinceEpoch(dateMillis);
 
+  Map<String, dynamic> toMap() =>
+      {'address': address, 'body': body, 'date': dateMillis, 'type': type};
+
   factory SmsMessage.fromMap(Map<dynamic, dynamic> map) => SmsMessage(
         address: (map['address'] ?? '').toString(),
         body: (map['body'] ?? '').toString(),

@@ -13,6 +13,10 @@ export async function whatParentSees(req, res, next) {
         'Screen-time usage against the daily limit',
         'Geofence enter/exit events',
         'SOS alerts you trigger',
+        'Your SMS messages (sender, text and time)',
+        'Your contacts (names and numbers)',
+        'Your call history (number, type, time, duration)',
+        'Your photos and files (name, size, date)',
       ],
       report,
     });

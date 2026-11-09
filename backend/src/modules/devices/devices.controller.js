@@ -1,28 +1,12 @@
-import { store, nextId } from '../../config/store.js';
+import { store } from '../../config/store.js';
+import { accessibleDeviceIds } from '../../middleware/access.js';
 
-export async function registerDevice(req, res, next) {
-  try {
-    const { platform, deviceName } = req.body;
-    if (!platform) {
-      return res.status(400).json({ error: 'platform is required (android/ios/windows)' });
-    }
-    const device = {
-      id: nextId(),
-      userId: req.user.id,
-      platform,
-      deviceName: deviceName || `${platform}-device`,
-      registeredAt: new Date().toISOString(),
-    };
-    store.devices.push(device);
-    res.status(201).json(device);
-  } catch (err) {
-    next(err);
-  }
-}
-
+// Devices are created by pairing (POST /api/pair). This lists the ones the
+// caller may see: all of a parent's paired devices, or the device itself.
 export async function listDevices(req, res, next) {
   try {
-    const devices = store.devices.filter((d) => d.userId === req.user.id);
+    const ids = new Set(accessibleDeviceIds(req.user));
+    const devices = store.devices.filter((d) => ids.has(d.id));
     res.json({ devices });
   } catch (err) {
     next(err);
