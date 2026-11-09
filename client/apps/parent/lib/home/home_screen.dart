@@ -110,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _reportCards(BuildContext context, String name, Map report) {
     final sos = (report['activeSosAlerts'] as List? ?? const []);
+    final requests = (report['pendingTimeRequests'] as List? ?? const []);
     return [
       if (sos.isNotEmpty) ...[
         const SizedBox(height: FgSpace.md),
@@ -117,6 +118,14 @@ class _HomeScreenState extends State<HomeScreen> {
           name: name,
           alert: SosAlert.fromMap(sos.last as Map),
           count: sos.length,
+          onTap: () => widget.onGoToTab(3),
+        ),
+      ],
+      if (requests.isNotEmpty) ...[
+        const SizedBox(height: FgSpace.md),
+        _RequestBanner(
+          name: name,
+          minutes: ((requests.first as Map)['minutes'] as num).toInt(),
           onTap: () => widget.onGoToTab(3),
         ),
       ],
@@ -605,4 +614,43 @@ class _HomeSkeleton extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _RequestBanner extends StatelessWidget {
+  const _RequestBanner(
+      {required this.name, required this.minutes, required this.onTap});
+  final String name;
+  final int minutes;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = FgColors.of(context);
+    return FgCard(
+      onTap: onTap,
+      borderColor: c.warn,
+      color: c.tint(c.warn),
+      child: Row(
+        children: [
+          IconWell(Icons.more_time_rounded, color: c.warn),
+          const SizedBox(width: FgSpace.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$name asks for +$minutes min',
+                    style: TextStyle(
+                        color: c.warn,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15)),
+                Text('Tap to approve or deny',
+                    style: TextStyle(color: c.warn, fontSize: 13)),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: c.warn),
+        ],
+      ),
+    );
+  }
 }

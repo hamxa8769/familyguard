@@ -58,7 +58,20 @@ class _AppShellState extends State<AppShell> {
     }
   }
 
-  void _goTo(int index) => setState(() => _index = index);
+  int _alertsVersion = 0;
+
+  // Tabs stay alive (instant switching) but refresh their data when shown,
+  // so a decision made on one tab shows up on the others.
+  void _goTo(int index) {
+    setState(() {
+      if (index == 3 && _index != 3) _alertsVersion++;
+      _index = index;
+    });
+    if (index == 0) {
+      final id = _state.selectedDeviceId;
+      if (id != null) _state.loadReport(id);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +90,7 @@ class _AppShellState extends State<AppShell> {
             subtitle: 'Limits, blocks and safe zones',
             section: FeatureSection.rules,
           ),
-          const AlertsScreen(),
+          AlertsScreen(key: ValueKey('alerts-$_alertsVersion')),
           const ChildrenScreen(),
         ],
       ),

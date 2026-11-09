@@ -1,6 +1,7 @@
 import { store } from '../../config/store.js';
 import { summarise } from '../usage/usage.service.js';
 import { isWithinBedtime } from '../bedtime/bedtime.service.js';
+import { bonusMinutesToday } from '../screentime/screentime.service.js';
 
 // Pulls together one device's data into a single parent-facing report.
 export function buildDeviceReport(deviceId) {
@@ -17,7 +18,9 @@ export function buildDeviceReport(deviceId) {
     generatedAt: new Date().toISOString(),
     usage,
     screenTime: {
-      dailyMinutes: limit?.dailyMinutes ?? null,
+      dailyMinutes:
+        limit?.dailyMinutes != null ? limit.dailyMinutes + bonusMinutesToday(deviceId) : null,
+      bonusMinutes: bonusMinutesToday(deviceId),
       consumedMinutes: Math.round(usage.totalSeconds / 60),
     },
     lastLocation: location,
@@ -27,6 +30,9 @@ export function buildDeviceReport(deviceId) {
       ? { ...bedtime, lockedNow: isWithinBedtime(bedtime, new Date()) }
       : null,
     blockedApps: blocked,
+    pendingTimeRequests: store.timeRequests.filter(
+      (r) => r.deviceId === deviceId && r.status === 'pending'
+    ),
   };
 }
 

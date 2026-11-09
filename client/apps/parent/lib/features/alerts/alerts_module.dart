@@ -22,7 +22,7 @@ class AlertsModule implements FeatureModule {
   Widget buildScreen(BuildContext context) => const AlertsScreen();
 }
 
-enum _Kind { sos, zone }
+enum _Kind { sos, zone, request }
 
 class _Alert {
   _Alert({
@@ -31,6 +31,7 @@ class _Alert {
     required this.title,
     required this.subtitle,
     this.sos,
+    this.request,
   });
   final _Kind kind;
   final DateTime at;
@@ -38,7 +39,11 @@ class _Alert {
   final String subtitle;
   final SosAlert? sos;
 
-  bool get open => sos != null && !sos!.resolved;
+  /// "More time" request from a child ({id, minutes, reason, status}).
+  final Map? request;
+
+  bool get open =>
+      (sos != null && !sos!.resolved) || request?['status'] == 'pending';
 }
 
 /// SOS alerts from all children + safe-zone events from every device,
@@ -67,6 +72,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
         title: a.message,
         subtitle: state.labelFor(a.deviceId),
         sos: a,
+      ));
+    }
+    final reqs = await api.get('/api/requests');
+    for (final r in (reqs['requests'] as List).cast<Map>()) {
+      final reason = '${r['reason'] ?? ''}'.trim();
+      out.add(_Alert(
+        kind: _Kind.request,
+        at: (DateTime.tryParse('${r['at']}') ?? DateTime(2000)).toLocal(),
+        title: '${state.labelFor('${r['deviceId']}').split(' (').first} asks for +${r['minutes']} min',
+        subtitle: reason.isEmpty ? 'More screen time' : '"$reason"',
+        request: r,
       ));
     }
     final devices = state.devices;
@@ -114,7 +130,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
           final alerts = _filter == null
               ? all
               : all.where((a) => a.kind == _filter).toList();
-          final openCount = all.where((a) => a.open).length;
+          final openCount =
+              all.where((a) => a.kind == _Kind.sos && a.open).length;
+          final pendingReq =
+              all.where((a) => a.kind == _Kind.request && a.open).length;
 
           final rows = <Widget>[
             Wrap(
@@ -131,6 +150,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
                   selected: _filter == _Kind.sos,
                   color: c.danger,
                   onTap: () => setState(() => _filter = _Kind.sos),
+                ),
+                _FilterChip(
+                  label: pendingReq > 0 ? 'Requests · $pendingReq' : 'Requests',
+                  selected: _filter == _Kind.request,
+                  color: c.warn,
+                  onTap: () => setState(() => _filter = _Kind.request),
                 ),
                 _FilterChip(
                   label: 'Safe zones',
@@ -228,20 +253,46 @@ class _AlertCard extends StatelessWidget {
   final _Alert alert;
   final VoidCallback onResolved;
 
+  Future<void> _decide(BuildContext context, bool approve) async {
+    final minutes = alert.request!['minutes'];
+    final ok = await saveWithFeedback(
+      context,
+      () => ParentState.instance.api.post(
+          '/api/requests/${alert.request!['id']}/decide', {'approve': approve}),
+      approve ? '+$minutes min approved for today' : 'Request denied',
+    );
+    if (ok) onResolved();
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = FgColors.of(context);
     final isSos = alert.kind == _Kind.sos;
-    final color = isSos ? (alert.open ? c.danger : c.textMuted) : c.safe;
+    final isReq = alert.kind == _Kind.request;
+    final color = isSos
+        ? (alert.open ? c.danger : c.textMuted)
+        : isReq
+            ? (alert.open ? c.warn : c.textMuted)
+            : c.safe;
+    final urgent = isSos && alert.open;
     final t = TimeOfDay.fromDateTime(alert.at).format(context);
 
     return FgCard(
       padding: const EdgeInsets.all(FgSpace.md),
-      color: alert.open ? c.tint(c.danger) : null,
-      borderColor: alert.open ? c.danger : null,
+      color: urgent ? c.tint(c.danger) : null,
+      borderColor: urgent
+          ? c.danger
+          : (isReq && alert.open)
+              ? c.warn
+              : null,
       child: Row(
         children: [
-          IconWell(isSos ? Icons.sos_rounded : Icons.shield_moon_outlined,
+          IconWell(
+              isSos
+                  ? Icons.sos_rounded
+                  : isReq
+                      ? Icons.more_time_rounded
+                      : Icons.shield_moon_outlined,
               color: color),
           const SizedBox(width: FgSpace.md),
           Expanded(
@@ -251,10 +302,43 @@ class _AlertCard extends StatelessWidget {
                 Text(alert.title,
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: alert.open ? c.danger : c.text)),
+                        color: urgent ? c.danger : c.text)),
                 const SizedBox(height: 2),
                 Text('$t · ${alert.subtitle}',
                     style: TextStyle(color: c.textMuted, fontSize: 12)),
+                if (isReq && !alert.open)
+                  Text(
+                      alert.request!['status'] == 'approved'
+                          ? 'Approved'
+                          : 'Denied',
+                      style: TextStyle(
+                          color: alert.request!['status'] == 'approved'
+                              ? c.safe
+                              : c.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                if (isReq && alert.open) ...[
+                  const SizedBox(height: FgSpace.sm),
+                  Row(
+                    children: [
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: c.safe,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () => _decide(context, true),
+                        child: const Text('Approve'),
+                      ),
+                      const SizedBox(width: FgSpace.sm),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact),
+                        onPressed: () => _decide(context, false),
+                        child: const Text('Deny'),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

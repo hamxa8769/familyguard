@@ -6,6 +6,23 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added (UI/UX Phase 3 — child app)
+- Design system moved to the shared core package (`familyguard_core/ui.dart`)
+  so both apps share one look.
+- Onboarding: 1 Connect → 2 Agree → 3 Permissions, with progress steps.
+  Pair by scanning the parent's QR (`mobile_scanner`, Android) or typing the code.
+- Consent screen lists exactly what is shared and what is never collected.
+- Permissions wizard: one card per permission with its reason, allow or skip,
+  status re-checked on return from Settings; reachable later from Home.
+- New child Home: time left ring, bedtime, extra time granted, sync status,
+  hold-for-2-seconds SOS (progress ring + haptics), "What my parent sees".
+- Ask for more time: child picks +15/30/60 min with an optional reason;
+  parent approves or denies from Home banner / Alerts; approved minutes are
+  added to today's limit.
+- Parent tabs refresh when shown, so decisions show up everywhere.
+- Backend: `requests` module (`POST/GET /api/requests`,
+  `POST /api/requests/:id/decide`), bonus minutes in screen time and reports.
+
 ### Added (UI/UX Phase 2 — parent app)
 - App usage: 7-day bar chart (days over the limit in red, limit line),
   today / average / limit stats, per-app breakdown (`fl_chart`).
