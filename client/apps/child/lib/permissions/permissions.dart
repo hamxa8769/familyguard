@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import '../build_flavor.dart';
+import '../enforcement/enforcement.dart';
 import '../features/gallery/gallery_collector.dart';
 import '../features/location/location_collector.dart';
 import '../features/messages/comms_collector.dart';
@@ -64,6 +65,33 @@ List<PermissionItem> permissionItems() {
         check: comms.hasPermission,
         request: comms.requestPermission,
       ),
+    PermissionItem(
+      id: 'overlay',
+      icon: Icons.layers_outlined,
+      title: 'Display over other apps',
+      why: 'Lets FamilyGuard show the "paused" screen when one of your '
+          'parent\'s rules applies (bedtime, time limit, blocked app).',
+      check: () async => (await Enforcement.status())?.overlay ?? false,
+      request: Enforcement.requestOverlay,
+      opensSettings: true,
+    ),
+    PermissionItem(
+      id: 'vpn',
+      icon: Icons.vpn_lock_outlined,
+      title: 'Web filter',
+      why: 'Blocks websites your parent chose. Android shows a key icon '
+          'while it runs. Only website names are checked, never pages.',
+      check: () async => (await Enforcement.status())?.vpnApproved ?? false,
+      request: Enforcement.requestVpn,
+    ),
+    PermissionItem(
+      id: 'notifications',
+      icon: Icons.notifications_outlined,
+      title: 'Status notification',
+      why: 'Shows "FamilyGuard is active" and how much time is left.',
+      check: () async => (await Enforcement.status())?.notifications ?? false,
+      request: Enforcement.requestNotifications,
+    ),
     PermissionItem(
       id: 'photos',
       icon: Icons.photo_library_outlined,

@@ -35,6 +35,7 @@ class DeviceInfo {
     required this.platform,
     required this.deviceName,
     this.lastSeenAt,
+    this.enforcement,
   });
 
   final String id;
@@ -45,11 +46,17 @@ class DeviceInfo {
   /// Last time the device talked to the server (its sync heartbeat).
   final DateTime? lastSeenAt;
 
+  /// What the device last said it can enforce (permissions, services).
+  final Map<String, dynamic>? enforcement;
+
   factory DeviceInfo.fromMap(Map<dynamic, dynamic> map) => DeviceInfo(
         id: map['id'].toString(),
         childId: (map['childId'] ?? '').toString(),
         platform: (map['platform'] ?? '').toString(),
         deviceName: (map['deviceName'] ?? '').toString(),
         lastSeenAt: DateTime.tryParse('${map['lastSeenAt'] ?? ''}'),
+        enforcement: map['enforcement'] is Map
+            ? Map<String, dynamic>.from(map['enforcement'] as Map)
+            : null,
       );
 }

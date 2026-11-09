@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../common/enforcement_note.dart';
 import '../../common/widgets.dart';
 import '../../feature_module.dart';
 import '../../state/parent_state.dart';
@@ -131,10 +132,15 @@ class _DomainListState extends State<_DomainList> {
             ),
           ),
         const Padding(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: EnforcementNote(web: true),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Text(
             'Subdomains are included (blocking example.com also blocks '
-            'm.example.com). Filtering in the device browser is not enforced yet.',
+            'm.example.com). Works for apps and browsers using normal DNS; '
+            'browsers with their own "secure DNS" turned on can bypass it.',
             style: TextStyle(fontSize: 12),
           ),
         ),

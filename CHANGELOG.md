@@ -6,6 +6,24 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added (Phase 5 — enforcement on Android)
+- **Rules now apply on the child's phone.** A visible foreground service
+  ("FamilyGuard is active", with time left) watches the front app and shows a
+  "paused" screen for blocked apps, during bedtime, and when today's limit
+  (+ approved extra time) is used up. Calls, home screen, Settings and
+  FamilyGuard are never paused. Rules are cached on the phone (offline, and
+  restored after reboot).
+- **Web filter:** local DNS-only VPN (`DnsVpnService`) answers blocked domains
+  (and their subdomains) with NXDOMAIN; other lookups are forwarded unchanged.
+  Nothing is logged or uploaded.
+- **Permissions wizard:** "Display over other apps", "Web filter" (VPN approval)
+  and "Status notification" added, each with its reason.
+- **Parent sees whether rules are enforced:** the device reports its status
+  (`PUT /api/devices/:id/status`); rule screens show "Enforced on …" or which
+  permission the child still has to allow.
+- **Consent v3** describes the rules; children re-confirm.
+- No accessibility service is used (less likely to trip Play Protect).
+
 ### Added (Phase 4 — system)
 - **Persistent storage.** Data survives restarts: JSON file by default, or
   PostgreSQL via `DATABASE_URL` (JSONB per collection, created automatically).

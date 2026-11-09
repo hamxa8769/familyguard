@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.net.Uri
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -39,6 +40,7 @@ class FgNativePlugin : FlutterPlugin, ActivityAware {
         channel(m, "familyguard/comms") { call, result -> onComms(call, result) }
         channel(m, "familyguard/location") { call, result -> onLocation(call, result) }
         channel(m, "familyguard/files") { call, result -> onFiles(call, result) }
+        channel(m, "familyguard/enforce") { call, result -> onEnforce(call, result) }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -159,7 +161,78 @@ class FgNativePlugin : FlutterPlugin, ActivityAware {
         }
     }
 
+    /**
+     * Rules from the parent → saved on the phone → applied by
+     * [EnforcementService] (apps, bedtime, limit) and [DnsVpnService] (web).
+     */
+    private fun onEnforce(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
+            "setRules" -> {
+                try {
+                    Rules.save(context, call.argument<String>("json") ?: "{}")
+                    result.success(apply())
+                } catch (e: Exception) {
+                    result.error("bad_rules", e.message, null)
+                }
+            }
+            "status" -> result.success(status())
+            "requestOverlay" -> {
+                val i = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${context.packageName}"),
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                (activity ?: context).startActivity(i)
+                result.success(true)
+            }
+            "requestVpn" -> {
+                val a = activity
+                val prepare = android.net.VpnService.prepare(context)
+                if (prepare == null) {
+                    result.success(true) // already approved
+                } else if (a == null) {
+                    result.success(false)
+                } else {
+                    a.startActivityForResult(prepare, REQ_VPN)
+                    result.success(false) // Dart re-checks status on resume
+                }
+            }
+            "requestNotifications" -> {
+                val a = activity
+                if (android.os.Build.VERSION.SDK_INT >= 33 && a != null) {
+                    ActivityCompat.requestPermissions(
+                        a, arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFY
+                    )
+                }
+                result.success(true)
+            }
+            "apply" -> result.success(apply())
+            else -> result.notImplemented()
+        }
+    }
+
+    private fun apply(): Map<String, Any> {
+        EnforcementService.sync(context)
+        DnsVpnService.sync(context)
+        return status()
+    }
+
+    private fun status(): Map<String, Any> {
+        val rules = Rules.load(context)
+        return mapOf(
+            "usageAccess" to Collectors.hasUsageAccess(context),
+            "overlay" to Settings.canDrawOverlays(context),
+            "notifications" to androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled(),
+            "vpnApproved" to DnsVpnService.prepared(context),
+            "appRulesActive" to EnforcementService.running,
+            "webFilterActive" to DnsVpnService.running,
+            "hasAppRules" to rules.hasAppRules,
+            "hasWebRules" to rules.blockedDomains.isNotEmpty(),
+        )
+    }
+
     companion object {
+        private const val REQ_VPN = 1004
+        private const val REQ_NOTIFY = 1005
         private const val REQ_COMMS = 1001
         private const val REQ_LOCATION = 1002
         private const val REQ_GALLERY = 1003

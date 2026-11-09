@@ -21,6 +21,10 @@ class ConsentScreen extends StatelessWidget {
       'and the photos and files on this device. '
       'This information is shared about every 15 minutes, also while the app '
       'is closed. '
+      'Your parent can also set rules on this phone: block apps, set a daily '
+      'screen-time limit, a bedtime, and block websites. When a rule applies, '
+      'apps are paused (calls, the home screen and FamilyGuard always work) and '
+      'you can ask for more time. '
       'FamilyGuard runs visibly and does not hide itself, and you can always open '
       '"What my parent sees" to check exactly what is shared. Monitoring starts '
       'only after you accept below.';
@@ -34,6 +38,14 @@ class ConsentScreen extends StatelessWidget {
       (Icons.call_outlined, 'Call history', 'Number, type, time, length'),
     (Icons.photo_library_outlined, 'Photos and files', 'Name, size and date'),
     (Icons.sos_rounded, 'SOS alerts', 'When you press SOS'),
+  ];
+
+  static const rules = [
+    (Icons.block_rounded, 'Block apps', 'Chosen apps are paused'),
+    (Icons.timelapse_rounded, 'Daily limit', 'Apps pause when time is up'),
+    (Icons.bedtime_outlined, 'Bedtime', 'Apps pause at night'),
+    (Icons.public_off_rounded, 'Web filter', 'Chosen websites won\'t open'),
+    (Icons.call_outlined, 'Always allowed', 'Calls, home screen, FamilyGuard'),
   ];
 
   @override
@@ -66,6 +78,23 @@ class ConsentScreen extends StatelessWidget {
                         for (final (icon, title, sub) in shared)
                           ListTile(
                             leading: IconWell(icon, size: 36),
+                            title: Text(title,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                            subtitle: Text(sub,
+                                style: TextStyle(color: c.textMuted)),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SectionLabel('Rules your parent can set'),
+                  FgCard(
+                    padding: const EdgeInsets.symmetric(vertical: FgSpace.xs),
+                    child: Column(
+                      children: [
+                        for (final (icon, title, sub) in rules)
+                          ListTile(
+                            leading: IconWell(icon, size: 36, color: c.warn),
                             title: Text(title,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w600)),

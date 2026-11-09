@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../common/enforcement_note.dart';
 import '../../common/widgets.dart';
 import '../../feature_module.dart';
 import '../../state/parent_state.dart';
@@ -168,9 +169,11 @@ class _ScheduleState extends State<_Schedule> {
           child: Text(_saving ? 'Saving…' : 'Save schedule'),
         ),
         const SizedBox(height: FgSpace.md),
+        const EnforcementNote(),
+        const SizedBox(height: FgSpace.sm),
         Text(
-          'The schedule is shown on your child\'s device. Locking the device '
-          'during bedtime is coming in a later update.',
+          'During bedtime apps are paused; calls, the home screen and '
+          'FamilyGuard stay available.',
           style: TextStyle(fontSize: 12, color: c.textMuted),
         ),
       ],

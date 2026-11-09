@@ -9,7 +9,8 @@ import '../network/api_client.dart';
 /// in the background), [currentVersion] goes up and the child is asked again.
 class ConsentService {
   /// v1: initial notice. v2: adds background sharing while the app is closed.
-  static const currentVersion = 2;
+  /// v3: adds rules enforced on the phone (app blocking, limit, bedtime, web).
+  static const currentVersion = 3;
 
   static const _key = 'consent_accepted_at';
   static const _versionKey = 'consent_version';

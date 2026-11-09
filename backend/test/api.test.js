@@ -142,3 +142,16 @@ test('feed returns new SOS, requests and zone events for the parent only', async
   const [d] = await call('GET', '/api/feed', null, f.device);
   assert.equal(d, 403, 'devices cannot read the parent feed');
 });
+
+test('device reports enforcement status; parent sees it on the child profile', async () => {
+  const status = { usageAccess: true, overlay: false, appRulesActive: false, hasAppRules: true, evil: 'x' };
+  let [s, b] = await call('PUT', `/api/devices/${f.id}/status`, { enforcement: status }, f.device);
+  assert.equal(s, 200);
+  assert.equal(b.enforcement.evil, undefined, 'unknown keys dropped');
+  [s] = await call('PUT', `/api/devices/${f.id}/status`, { enforcement: status }, f.parent);
+  assert.equal(s, 403, 'only the device reports its own status');
+  [, b] = await call('GET', '/api/children', null, f.parent);
+  const dev = b.children[0].devices.find((d) => d.id === f.id);
+  assert.equal(dev.enforcement.overlay, false);
+  assert.equal(dev.enforcement.hasAppRules, true);
+});

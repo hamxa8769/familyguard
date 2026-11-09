@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../common/enforcement_note.dart';
 import '../../common/widgets.dart';
 import '../../feature_module.dart';
 import '../../state/parent_state.dart';
@@ -161,9 +162,11 @@ class _LimitEditorState extends State<_LimitEditor> {
           child: Text(_saving ? 'Saving…' : 'Save limit'),
         ),
         const SizedBox(height: FgSpace.md),
+        const EnforcementNote(),
+        const SizedBox(height: FgSpace.sm),
         Text(
-          'The limit is shown on your child\'s device. Locking the device when '
-          'it runs out is coming in a later update.',
+          'When the time is used up, apps are paused until tomorrow. Your '
+          'child can ask for more time; calls always work.',
           style: TextStyle(fontSize: 12, color: c.textMuted),
         ),
       ],

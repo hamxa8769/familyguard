@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/ui.dart';
 import '../pairing/pair_screen.dart' show OnboardingSteps;
+import '../enforcement/enforcement.dart';
 import 'permissions.dart';
 
 /// Step 3 of onboarding (and later: Home → Permissions).
@@ -40,6 +41,7 @@ class _PermissionsScreenState extends State<PermissionsScreen>
   }
 
   Future<void> _refresh() async {
+    await Enforcement.apply();
     for (final p in _items) {
       _granted[p.id] = await p.check();
     }

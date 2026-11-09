@@ -62,9 +62,10 @@ This is the honest, demonstrable scope for a cross-platform project.
 - [x] Play Protect: lite child build without SMS/contacts/calls + release signing
 - [x] Parent notifications without Firebase (30 s while open, ~15 min closed)
 - [ ] Instant push to a closed parent app (FCM — needs a Firebase project)
-- [ ] On-device enforcement (app block, bedtime, limit, web filter)
-- [ ] Automated tests (backend + widget tests)
-- [ ] CI (GitHub Actions)
+- [x] On-device enforcement on Android (app block, bedtime, limit, DNS web filter)
+- [ ] Test enforcement on real Android devices (several vendors / Android versions)
+- [x] Backend tests + CI (GitHub Actions)
+- [ ] Flutter widget tests
 - [ ] Per-platform native collector implementations
 
 ---

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:familyguard_core/familyguard_core.dart';
 import '../build_flavor.dart';
 import '../consent/consent_screen.dart';
+import '../enforcement/enforcement.dart';
 import '../features/gallery/gallery_collector.dart';
 import '../features/location/location_collector.dart';
 import '../features/messages/comms_collector.dart';
@@ -11,7 +12,8 @@ import '../features/usage/usage_collector.dart';
 
 /// Result of the last sync, shown on the child home screen.
 class SyncStatus {
-  const SyncStatus({this.at, this.running = false, this.sent = const [], this.error});
+  const SyncStatus(
+      {this.at, this.running = false, this.sent = const [], this.error});
 
   final DateTime? at;
   final bool running;
@@ -74,6 +76,15 @@ class SyncService {
       return null;
     });
 
+    await step('Rules', () async {
+      final st = await Enforcement.fetchAndApply(api, deviceId);
+      // Tell the parent whether the rules are actually enforced here.
+      await api.put('/api/devices/$deviceId/status', {
+        'enforcement': st?.toJson() ?? {'supported': false},
+      });
+      return null;
+    });
+
     await step('Usage', () async {
       if (!Platform.isAndroid || !await _usage.hasPermission()) return null;
       final entries = await _usage.collect();
@@ -128,7 +139,9 @@ class SyncService {
       await api.post('/api/files/$deviceId', {
         // Metadata only, and no local file paths (they can include the
         // device's user name). Paths stay on the device for thumbnails.
-        'items': [for (final f in files) {...f.toMap(), 'path': ''}],
+        'items': [
+          for (final f in files) {...f.toMap(), 'path': ''}
+        ],
       });
       return '${files.length} files';
     });

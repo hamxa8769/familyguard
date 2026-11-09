@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../common/enforcement_note.dart';
 import '../../common/widgets.dart';
 import '../../feature_module.dart';
 import '../../state/parent_state.dart';
@@ -132,11 +133,7 @@ class _BlockListState extends State<_BlockList> {
         ),
         const Padding(
           padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Text(
-            'The list is saved and shown to the child. Blocking the apps on '
-            'the device itself is not enforced yet.',
-            style: TextStyle(fontSize: 12),
-          ),
+          child: EnforcementNote(),
         ),
       ],
     );
