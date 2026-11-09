@@ -32,8 +32,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     final email = _email.text.trim();
     final password = _password.text;
-    if (email.isEmpty || password.length < 6) {
-      setState(() => _error = 'Enter your email and a password of 6+ characters');
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Enter your email and password');
+      return;
+    }
+    if (_register && password.length < 8) {
+      setState(() => _error = 'Use a password of at least 8 characters');
       return;
     }
     setState(() {

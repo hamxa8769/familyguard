@@ -26,7 +26,7 @@ jobs:
         run: flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings
 
   backend-check:
-    name: Backend syntax check
+    name: Backend checks and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,3 +39,6 @@ jobs:
       - name: Syntax check all modules
         working-directory: backend
         run: find src -name "*.js" -print0 | xargs -0 -n1 node --check && echo "All backend JS OK"
+      - name: API and persistence tests
+        working-directory: backend
+        run: npm test

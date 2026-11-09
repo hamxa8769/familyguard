@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
 import 'package:familyguard_core/ui.dart';
+import '../build_flavor.dart';
 import '../pairing/pair_screen.dart' show OnboardingSteps;
 
 /// Step 2 of onboarding: the full, plain-language notice. Nothing is collected
@@ -12,20 +13,25 @@ class ConsentScreen extends StatelessWidget {
   final VoidCallback onAccepted;
 
   /// Exact text recorded on the server when the child accepts.
-  static const consentText =
+  static String get consentText =>
       'This device is managed with FamilyGuard. While it is active, a parent or '
       'guardian in your family can see which apps are used and for how long, this '
-      'device\'s location, screen-time limits, your SMS messages, contacts, call '
-      'history, and the photos and files on this device. '
+      'device\'s location, screen-time limits, '
+      '${kLiteBuild ? '' : 'your SMS messages, contacts, call history, '}'
+      'and the photos and files on this device. '
+      'This information is shared about every 15 minutes, also while the app '
+      'is closed. '
       'FamilyGuard runs visibly and does not hide itself, and you can always open '
       '"What my parent sees" to check exactly what is shared. Monitoring starts '
       'only after you accept below.';
 
-  static const shared = [
+  static final shared = [
     (Icons.bar_chart_rounded, 'App usage', 'Which apps and for how long'),
     (Icons.location_on_outlined, 'Location', 'Where this device is'),
-    (Icons.sms_outlined, 'Messages and contacts', 'SMS text, sender and time'),
-    (Icons.call_outlined, 'Call history', 'Number, type, time, length'),
+    if (!kLiteBuild)
+      (Icons.sms_outlined, 'Messages and contacts', 'SMS text, sender and time'),
+    if (!kLiteBuild)
+      (Icons.call_outlined, 'Call history', 'Number, type, time, length'),
     (Icons.photo_library_outlined, 'Photos and files', 'Name, size and date'),
     (Icons.sos_rounded, 'SOS alerts', 'When you press SOS'),
   ];
@@ -84,6 +90,22 @@ class ConsentScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: FgSpace.lg),
+                  FgCard(
+                    child: Row(
+                      children: [
+                        const IconWell(Icons.sync_rounded),
+                        const SizedBox(width: FgSpace.md),
+                        Expanded(
+                          child: Text(
+                            'Shared about every 15 minutes — also while the '
+                            'app is closed.',
+                            style: TextStyle(color: c.text),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: FgSpace.md),
                   Text(
                     'You can check what is shared at any time in "What my '
                     'parent sees".',

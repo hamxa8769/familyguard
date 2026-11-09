@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import '../build_flavor.dart';
 import '../features/gallery/gallery_collector.dart';
 import '../features/location/location_collector.dart';
 import '../features/messages/comms_collector.dart';
@@ -54,14 +55,15 @@ List<PermissionItem> permissionItems() {
       check: location.hasPermission,
       request: location.requestPermission,
     ),
-    PermissionItem(
-      id: 'comms',
-      icon: Icons.sms_outlined,
-      title: 'Messages, contacts and calls',
-      why: 'Shares SMS, contacts and call history with your parent.',
-      check: comms.hasPermission,
-      request: comms.requestPermission,
-    ),
+    if (!kLiteBuild)
+      PermissionItem(
+        id: 'comms',
+        icon: Icons.sms_outlined,
+        title: 'Messages, contacts and calls',
+        why: 'Shares SMS, contacts and call history with your parent.',
+        check: comms.hasPermission,
+        request: comms.requestPermission,
+      ),
     PermissionItem(
       id: 'photos',
       icon: Icons.photo_library_outlined,

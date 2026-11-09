@@ -6,6 +6,33 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added (Phase 4 — system)
+- **Persistent storage.** Data survives restarts: JSON file by default, or
+  PostgreSQL via `DATABASE_URL` (JSONB per collection, created automatically).
+  Debounced writes of changed collections only, flush on shutdown, retention.
+- **No shared default secret.** JWT secret from `JWT_SECRET` or generated on
+  first start and stored with the data.
+- **Rate limiting** on login, sign-up and pairing; stricter sign-up validation
+  (valid email, 8+ character password).
+- **Backend tests** (`npm test`, 13 tests) run in CI.
+- **Background sync (Android).** Native collectors moved from MainActivity to
+  a local plugin (`packages/fg_native`) so WorkManager can sync about every
+  15 minutes while the child app is closed. Queries run off the UI thread.
+- **Consent v2.** The notice now says data is shared in the background; children
+  who accepted v1 are asked again.
+- **Play Protect.** Release builds a *lite* child APK (no SMS / contacts /
+  call log) and a *full* one; APKs are signed with your release key when the
+  keystore secrets are set. See docs/RELEASING.md.
+- **Parent notifications without Firebase.** New `GET /api/feed`; the parent
+  app checks it every 30 s while open and about every 15 min when closed
+  (Android WorkManager) and shows system notifications via a small local
+  plugin (`packages/fg_notify`). SOS uses a high-priority channel.
+
+### Fixed
+- Gallery query used `LIMIT` in the MediaStore sort order, which Android 11+
+  rejects. Local file paths are no longer uploaded (they can contain the
+  device user's name).
+
 ### Added (UI/UX Phase 3 — child app)
 - Design system moved to the shared core package (`familyguard_core/ui.dart`)
   so both apps share one look.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
+import '../../build_flavor.dart';
 
 /// Unique feature: the child sees EXACTLY what the parent sees.
 /// Loads GET /api/transparency/:deviceId — the same report the parent gets.
@@ -59,7 +60,11 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final collected = List<String>.from(data['collected'] as List? ?? const []);
+    final collected = List<String>.from(data['collected'] as List? ?? const [])
+        // The lite build never reads SMS, contacts or calls.
+        .where((s) =>
+            !kLiteBuild || !RegExp(r'SMS|contacts|call history').hasMatch(s))
+        .toList();
     final report = Map<String, dynamic>.from(data['report'] as Map? ?? {});
     final screen = report['screenTime'] as Map?;
     final usage = (report['usage']?['apps'] as List? ?? const [])

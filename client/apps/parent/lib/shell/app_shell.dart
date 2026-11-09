@@ -5,6 +5,7 @@ import '../feature_registry.dart';
 import '../features/alerts/alerts_module.dart';
 import '../features/children/children_module.dart';
 import '../home/home_screen.dart';
+import '../notifications/alert_watcher.dart';
 import '../state/app_controller.dart';
 import '../state/parent_state.dart';
 import '../theme/app_theme.dart';
@@ -33,7 +34,7 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   final _state = ParentState.instance;
   int _index = 0;
 
@@ -42,12 +43,34 @@ class _AppShellState extends State<AppShell> {
     super.initState();
     _state.addListener(_onState);
     _state.refresh();
+    WidgetsBinding.instance.addObserver(this);
+    // New SOS / requests / zone events → notification + refreshed screens.
+    AlertWatcher.instance.onNewItems = _refreshAll;
+    AlertWatcher.instance.start().catchError((_) {});
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    AlertWatcher.instance.onNewItems = null;
     _state.removeListener(_onState);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      AlertWatcher.instance.checkNow();
+      _refreshAll();
+    }
+  }
+
+  void _refreshAll() {
+    if (!mounted) return;
+    setState(() => _alertsVersion++);
+    _state.refresh();
+    final id = _state.selectedDeviceId;
+    if (id != null) _state.loadReport(id);
   }
 
   // Saved token rejected → back to sign in.

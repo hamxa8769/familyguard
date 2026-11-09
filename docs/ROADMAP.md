@@ -56,9 +56,13 @@ This is the honest, demonstrable scope for a cross-platform project.
 
 - [x] Apps wired to the API (auth, pairing, sync, all parent screens)
 - [x] Device-level access control
-- [ ] Background sync when the child app is closed
+- [x] Background sync when the child app is closed (WorkManager, ~15 min)
+- [x] Persistent storage (JSON file or PostgreSQL) + generated JWT secret
+- [x] Backend test suite in CI
+- [x] Play Protect: lite child build without SMS/contacts/calls + release signing
+- [x] Parent notifications without Firebase (30 s while open, ~15 min closed)
+- [ ] Instant push to a closed parent app (FCM — needs a Firebase project)
 - [ ] On-device enforcement (app block, bedtime, limit, web filter)
-- [ ] Postgres migrations + real persistence
 - [ ] Automated tests (backend + widget tests)
 - [ ] CI (GitHub Actions)
 - [ ] Per-platform native collector implementations

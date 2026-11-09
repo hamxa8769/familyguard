@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { store, nextId } from '../../config/store.js';
 import { newPairingCode } from './pairing.service.js';
+import { jwtSecret } from '../../config/secrets.js';
 
 const PLATFORMS = ['android', 'windows', 'ios'];
 
@@ -32,7 +33,7 @@ export async function pairDevice(req, res, next) {
 
     const token = jwt.sign(
       { id: device.id, role: 'device', deviceId: device.id, childId: child.id, parentId: child.parentId },
-      process.env.JWT_SECRET || 'dev-secret',
+      jwtSecret(),
       { expiresIn: '365d' }
     );
     res.status(201).json({

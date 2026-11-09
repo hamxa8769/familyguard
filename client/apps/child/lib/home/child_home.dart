@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
 import 'package:familyguard_core/ui.dart';
+import '../build_flavor.dart';
 import '../features/call_log/call_log_screen.dart';
 import '../features/gallery/gallery_screen.dart';
 import '../features/location/location_screen.dart';
@@ -11,6 +12,7 @@ import '../features/transparency/transparency_screen.dart';
 import '../features/usage/usage_screen.dart';
 import '../permissions/permissions.dart';
 import '../permissions/permissions_screen.dart';
+import '../sync/background_sync.dart';
 import '../sync/sync_service.dart';
 import 'more_time_sheet.dart';
 
@@ -54,6 +56,8 @@ class _ChildHomeState extends State<ChildHome> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _sync.start();
+    // Keep sharing while the app is closed (Android WorkManager).
+    BackgroundSync.enable().catchError((_) {});
     _sync.status.addListener(_onSynced);
     _load();
     _poll = Timer.periodic(const Duration(minutes: 1), (_) => _load());
@@ -150,9 +154,8 @@ class _ChildHomeState extends State<ChildHome> with WidgetsBindingObserver {
                   final sent = await showMoreTimeSheet(context);
                   if (sent) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Request sent to your parent')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Request sent to your parent')));
                     }
                     _load();
                   }
@@ -201,14 +204,16 @@ class _ChildHomeState extends State<ChildHome> with WidgetsBindingObserver {
                       icon: Icons.location_on_outlined,
                       label: 'Location',
                       onTap: () => _open(const LocationScreen())),
-                  QuickAction(
-                      icon: Icons.sms_outlined,
-                      label: 'Messages',
-                      onTap: () => _open(const MessagesScreen())),
-                  QuickAction(
-                      icon: Icons.call_outlined,
-                      label: 'Calls',
-                      onTap: () => _open(const CallLogScreen())),
+                  if (!kLiteBuild)
+                    QuickAction(
+                        icon: Icons.sms_outlined,
+                        label: 'Messages',
+                        onTap: () => _open(const MessagesScreen())),
+                  if (!kLiteBuild)
+                    QuickAction(
+                        icon: Icons.call_outlined,
+                        label: 'Calls',
+                        onTap: () => _open(const CallLogScreen())),
                   QuickAction(
                       icon: Icons.photo_library_outlined,
                       label: 'Photos',
@@ -243,7 +248,8 @@ class _SyncLine extends StatelessWidget {
       text = 'Monitoring is on · not shared yet';
       color = c.textMuted;
     } else {
-      text = 'Monitoring is on · shared ${_ago(status.at!)}';
+      text = 'Monitoring is on · shared ${_ago(status.at!)}'
+          '${BackgroundSync.supported ? ' · every 15 min in background' : ''}';
       color = c.safe;
     }
     return Row(
@@ -350,8 +356,7 @@ class _TimeCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(Icons.bedtime_outlined,
-                              size: 16,
-                              color: bedNow ? c.accent : c.textMuted),
+                              size: 16, color: bedNow ? c.accent : c.textMuted),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(bedText,

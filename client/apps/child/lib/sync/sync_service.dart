@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:familyguard_core/familyguard_core.dart';
+import '../build_flavor.dart';
 import '../consent/consent_screen.dart';
 import '../features/gallery/gallery_collector.dart';
 import '../features/location/location_collector.dart';
@@ -107,6 +108,7 @@ class SyncService {
     });
 
     await step('Messages', () async {
+      if (kLiteBuild) return null; // not in the lite build
       if (!await _comms.hasPermission()) return null; // Android only
       final contacts = await _comms.contacts();
       final sms = await _comms.sms();
@@ -124,7 +126,9 @@ class SyncService {
       if (!await _gallery.hasPermission()) return null;
       final files = await _gallery.images();
       await api.post('/api/files/$deviceId', {
-        'items': [for (final f in files) f.toMap()],
+        // Metadata only, and no local file paths (they can include the
+        // device's user name). Paths stay on the device for thumbnails.
+        'items': [for (final f in files) {...f.toMap(), 'path': ''}],
       });
       return '${files.length} files';
     });

@@ -16,6 +16,9 @@ dependencies:
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   qr_flutter: ^4.1.0
+  workmanager: ^0.10.10
+  fg_notify:
+    path: ../../packages/fg_notify
 
 dev_dependencies:
   flutter_test:

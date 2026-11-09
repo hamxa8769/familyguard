@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../notifications/alert_watcher.dart';
 import 'parent_state.dart';
 
 /// App-wide settings and session: theme mode, signed-in state, sign-out.
@@ -40,6 +41,7 @@ class AppController extends ChangeNotifier {
   void signedInChanged() => notifyListeners();
 
   Future<void> signOut() async {
+    await AlertWatcher.instance.stop().catchError((_) {});
     await AuthService.instance.logout();
     ParentState.instance.clear();
     notifyListeners();
