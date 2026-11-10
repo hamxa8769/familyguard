@@ -10,7 +10,8 @@ import '../network/api_client.dart';
 class ConsentService {
   /// v1: initial notice. v2: adds background sharing while the app is closed.
   /// v3: adds rules enforced on the phone (app blocking, limit, bedtime, web).
-  static const currentVersion = 3;
+  /// v4: adds optional photo previews (parent opt-in).
+  static const currentVersion = 4;
 
   static const _key = 'consent_accepted_at';
   static const _versionKey = 'consent_version';

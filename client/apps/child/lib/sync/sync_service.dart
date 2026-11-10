@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert' show base64Encode;
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:familyguard_core/familyguard_core.dart';
@@ -136,14 +137,36 @@ class SyncService {
       if (!(Platform.isAndroid || Platform.isWindows)) return null;
       if (!await _gallery.hasPermission()) return null;
       final files = await _gallery.images();
-      await api.post('/api/files/$deviceId', {
+      final res = await api.post('/api/files/$deviceId', {
         // Metadata only, and no local file paths (they can include the
         // device's user name). Paths stay on the device for thumbnails.
         'items': [
           for (final f in files) {...f.toMap(), 'path': ''}
         ],
       });
-      return '${files.length} files';
+      // Photo previews: only if the parent turned them on (and the child was
+      // told in the consent notice). The server asks for the ones it lacks.
+      final need = List<String>.from(res['needThumbs'] as List? ?? const []);
+      var sent = 0;
+      if (need.isNotEmpty) {
+        final thumbs = <Map<String, String>>[];
+        for (final key in need) {
+          final bytes = await _gallery.thumbnail(key);
+          if (bytes == null) continue;
+          thumbs.add({
+            'key': key,
+            'mime': Platform.isAndroid ? 'image/jpeg' : 'image/png',
+            'data': base64Encode(bytes),
+          });
+        }
+        if (thumbs.isNotEmpty) {
+          final up = await api.post('/api/files/$deviceId/thumbs', {'items': thumbs});
+          sent = (up['saved'] as num?)?.toInt() ?? 0;
+        }
+      }
+      return sent > 0
+          ? '${files.length} files, $sent previews'
+          : '${files.length} files';
     });
 
     status.value = SyncStatus(

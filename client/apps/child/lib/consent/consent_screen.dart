@@ -18,7 +18,9 @@ class ConsentScreen extends StatelessWidget {
       'guardian in your family can see which apps are used and for how long, this '
       'device\'s location, screen-time limits, '
       '${kLiteBuild ? '' : 'your SMS messages, contacts, call history, '}'
-      'and the photos and files on this device. '
+      'and the names, albums and dates of the photos and files on this device. '
+      'If your parent turns on photo previews, small previews of your newest '
+      '100 photos are shared too; "What my parent sees" shows when this is on. '
       'This information is shared about every 15 minutes, also while the app '
       'is closed. '
       'Your parent can also set rules on this phone: block apps, set a daily '
@@ -36,7 +38,8 @@ class ConsentScreen extends StatelessWidget {
       (Icons.sms_outlined, 'Messages and contacts', 'SMS text, sender and time'),
     if (!kLiteBuild)
       (Icons.call_outlined, 'Call history', 'Number, type, time, length'),
-    (Icons.photo_library_outlined, 'Photos and files', 'Name, size and date'),
+    (Icons.photo_library_outlined, 'Photos and files',
+        'Name, album and date; small previews only if your parent turns them on'),
     (Icons.sos_rounded, 'SOS alerts', 'When you press SOS'),
   ];
 

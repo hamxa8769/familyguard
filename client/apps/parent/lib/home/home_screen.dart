@@ -134,13 +134,17 @@ class _HomeScreenState extends State<HomeScreen> {
       const SizedBox(height: FgSpace.md),
       _LocationCard(report: report),
       const SectionLabel('Quick actions'),
+      // Fixed tile height so the row looks right on phones and wide screens.
       GridView.count(
         crossAxisCount: 4,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         mainAxisSpacing: FgSpace.sm,
         crossAxisSpacing: FgSpace.sm,
-        childAspectRatio: 0.7,
+        childAspectRatio:
+            (MediaQuery.sizeOf(context).width - 2 * FgSpace.lg - 3 * FgSpace.sm) /
+                4 /
+                96,
         children: [
           QuickAction(
               icon: Icons.timelapse_rounded,

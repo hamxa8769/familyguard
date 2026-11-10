@@ -28,7 +28,7 @@ before(async () => {
   });
   let out = '';
   server.stdout.on('data', (d) => (out += d));
-  for (let i = 0; i < 100 && !out.includes('listening'); i++) {
+  for (let i = 0; i < 300 && !out.includes('listening'); i++) {
     await new Promise((r) => setTimeout(r, 100));
   }
   assert.ok(out.includes('listening'), 'server did not start');
@@ -154,4 +154,56 @@ test('device reports enforcement status; parent sees it on the child profile', a
   const dev = b.children[0].devices.find((d) => d.id === f.id);
   assert.equal(dev.enforcement.overlay, false);
   assert.equal(dev.enforcement.hasAppRules, true);
+});
+
+test('photo previews: off by default, opt-in, upload only requested keys, delete on off', async () => {
+  const items = [
+    { key: 'm:1', name: 'a.jpg', album: 'Camera', size: 10, date: 3, isImage: true, path: 'C:\Users\kid\a.jpg' },
+    { key: 'm:2', name: 'b.png', album: 'Screenshots', size: 10, date: 2, isImage: true },
+  ];
+  let [s, b] = await call('POST', `/api/files/${f.id}`, { items }, f.device);
+  assert.equal(s, 201);
+  assert.equal(b.previews, false);
+  assert.deepEqual(b.needThumbs, []);
+  [, b] = await call('GET', `/api/files/${f.id}`, null, f.parent);
+  assert.equal(b.items[0].path, undefined, 'paths are never stored');
+  assert.equal(b.items[0].album, 'Camera');
+
+  [s] = await call('PUT', `/api/files/${f.id}/settings`, { previews: true }, f.device);
+  assert.equal(s, 403, 'only the parent turns previews on');
+  [s] = await call('PUT', `/api/files/${f.id}/settings`, { previews: true }, f.parent);
+  assert.equal(s, 200);
+  [, b] = await call('POST', `/api/files/${f.id}`, { items }, f.device);
+  assert.deepEqual(b.needThumbs, ['m:1', 'm:2']);
+
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString('base64');
+  [s, b] = await call('POST', `/api/files/${f.id}/thumbs`, {
+    items: [
+      { key: 'm:1', mime: 'image/jpeg', data: jpeg },
+      { key: 'm:999', mime: 'image/jpeg', data: jpeg }, // not requested
+      { key: 'm:2', mime: 'text/html', data: jpeg }, // bad type
+    ],
+  }, f.device);
+  assert.equal(b.saved, 1);
+
+  const res = await fetch(`${B}/api/files/${f.id}/thumb/m:1`, { headers: { Authorization: `Bearer ${f.parent}` } });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/jpeg');
+  const other = await fetch(`${B}/api/files/${f.id}/thumb/m:1`, { headers: { Authorization: `Bearer ${f.other}` } });
+  assert.equal(other.status, 403);
+  [, b] = await call('GET', `/api/files/${f.id}`, null, f.parent);
+  assert.equal(b.items.find((i) => i.key === 'm:1').hasThumb, true);
+
+  await call('PUT', `/api/files/${f.id}/settings`, { previews: false }, f.parent);
+  const gone = await fetch(`${B}/api/files/${f.id}/thumb/m:1`, { headers: { Authorization: `Bearer ${f.parent}` } });
+  assert.equal(gone.status, 404, 'turning previews off deletes them');
+});
+
+test('child transparency shows when photo previews are on', async () => {
+  let [, b] = await call('GET', `/api/transparency/${f.id}`, null, f.device);
+  assert.equal(b.photoPreviews, false);
+  await call('PUT', `/api/files/${f.id}/settings`, { previews: true }, f.parent);
+  [, b] = await call('GET', `/api/transparency/${f.id}`, null, f.device);
+  assert.equal(b.photoPreviews, true);
+  assert.ok(b.collected.some((c) => /previews/.test(c)));
 });

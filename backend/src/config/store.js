@@ -18,6 +18,7 @@ export const store = {
   smsMessages: [],      // { deviceId, items: [{address, body, date, type}] }
   callLogs: [],         // { deviceId, items: [{number, type, date, duration}] }
   files: [],            // { deviceId, items: [{name, path, size, date, isImage}] }
+  thumbnails: [],       // { deviceId, key, mime, data(base64), at } — photo previews (opt-in)
   timeRequests: [],     // { id, deviceId, minutes, reason, status, at, decidedAt }
   bonusTime: [],        // { deviceId, day, minutes, requestId }
 };

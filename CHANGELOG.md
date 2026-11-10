@@ -6,6 +6,22 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Added (Photos: albums and previews)
+- Photos are grouped by **album/folder** (Camera, Screenshots, WhatsApp
+  Images…; Windows: the folder under Pictures). Parent sees an albums grid
+  with 2×2 covers → album grid → swipeable preview viewer.
+- **Photo previews (opt-in):** off by default; the parent turns them on per
+  device. The child app then uploads small previews (~256 px, JPEG from the
+  Android thumbnail cache / PNG on Windows) of the newest 100 photos, only
+  the ones the server asks for (30 per sync). Turning previews off deletes
+  them all. Local file paths are never stored on the server.
+- Child: consent v4 mentions previews; "What my parent sees" shows when on.
+- Backend: `PUT /api/files/:id/settings`, `POST /api/files/:id/thumbs`,
+  `GET /api/files/:id/thumb/:key`; tests cover access, opt-in and deletion.
+- Fix: Home quick-action tiles were very tall on wide screens.
+- Verified: fg_native (enforcement, web filter, thumbnails) and fg_notify
+  Kotlin code compiles (Gradle, Android release config).
+
 ### Added (Phase 5 — enforcement on Android)
 - **Rules now apply on the child's phone.** A visible foreground service
   ("FamilyGuard is active", with time left) watches the front app and shows a

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 
@@ -41,6 +42,22 @@ class ApiClient {
 
   Future<dynamic> put(String path, Map<String, dynamic> body) => _send(
       () => http.put(_uri(path), headers: _headers, body: jsonEncode(body)));
+
+  /// Raw bytes (e.g. an image) instead of JSON.
+  Future<Uint8List> getBytes(String path) async {
+    final http.Response res;
+    try {
+      res = await http.get(_uri(path), headers: _headers).timeout(_timeout);
+    } on TimeoutException {
+      throw ApiException(0, 'Server did not respond ($_baseUrl)');
+    } catch (e) {
+      throw ApiException(0, 'Cannot reach server ($_baseUrl)');
+    }
+    if (res.statusCode >= 400) {
+      throw ApiException(res.statusCode, 'Request failed (${res.statusCode})');
+    }
+    return res.bodyBytes;
+  }
 
   Future<dynamic> delete(String path) =>
       _send(() => http.delete(_uri(path), headers: _headers));

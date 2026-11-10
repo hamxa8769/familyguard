@@ -182,7 +182,7 @@ object Collectors {
         return mapOf("lat" to b.latitude, "lng" to b.longitude, "time" to b.time)
     }
 
-    // ---- Photos (metadata only) ----
+    // ---- Photos ----
 
     fun galleryPermission(): String =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES
@@ -190,6 +190,7 @@ object Collectors {
 
     fun hasGalleryPermission(ctx: Context) = granted(ctx, galleryPermission())
 
+    /** Recent photos with album (folder) name and a stable key ("m:<media id>"). */
     fun images(ctx: Context): List<Map<String, Any>> {
         if (!hasGalleryPermission(ctx)) return emptyList()
         val out = ArrayList<Map<String, Any>>()
@@ -197,9 +198,11 @@ object Collectors {
         ctx.contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             arrayOf(
+                MediaStore.Images.Media._ID,
                 MediaStore.Images.Media.DISPLAY_NAME,
                 MediaStore.Images.Media.SIZE,
                 MediaStore.Images.Media.DATE_MODIFIED,
+                MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
                 // Local path: only for thumbnails on the child's own screen;
                 // the sync strips it before upload.
                 @Suppress("DEPRECATION") MediaStore.Images.Media.DATA
@@ -207,14 +210,18 @@ object Collectors {
             null, null,
             "${MediaStore.Images.Media.DATE_MODIFIED} DESC"
         )?.use { c ->
+            val idIdx = c.getColumnIndex(MediaStore.Images.Media._ID)
             val nameIdx = c.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
             val sizeIdx = c.getColumnIndex(MediaStore.Images.Media.SIZE)
             val dateIdx = c.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED)
+            val albumIdx = c.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
             @Suppress("DEPRECATION")
             val dataIdx = c.getColumnIndex(MediaStore.Images.Media.DATA)
             while (c.moveToNext() && out.size < MAX_ROWS) {
                 out.add(
                     mapOf(
+                        "key" to "m:${c.getLong(idIdx)}",
+                        "album" to (if (albumIdx >= 0) c.getString(albumIdx) ?: "" else ""),
                         "name" to (c.getString(nameIdx) ?: ""),
                         "path" to (if (dataIdx >= 0) c.getString(dataIdx) ?: "" else ""),
                         "size" to c.getLong(sizeIdx),
@@ -226,5 +233,49 @@ object Collectors {
             }
         }
         return out
+    }
+
+    /**
+     * Small JPEG preview (longest side ~[size] px) of the photo with [key]
+     * ("m:<media id>"), or null. Uses the system thumbnail cache, so the
+     * full photo is never read or uploaded.
+     */
+    fun thumbnail(ctx: Context, key: String, size: Int = 256): ByteArray? {
+        if (!hasGalleryPermission(ctx) || !key.startsWith("m:")) return null
+        val id = key.removePrefix("m:").toLongOrNull() ?: return null
+        val bitmap = try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                val uri = android.content.ContentUris.withAppendedId(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id
+                )
+                ctx.contentResolver.loadThumbnail(uri, android.util.Size(size, size), null)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaStore.Images.Thumbnails.getThumbnail(
+                    ctx.contentResolver, id, MediaStore.Images.Thumbnails.MINI_KIND, null
+                )
+            }
+        } catch (_: Exception) {
+            null
+        } ?: return null
+        return try {
+            val scaled = scaleDown(bitmap, size)
+            val out = java.io.ByteArrayOutputStream()
+            scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, out)
+            if (scaled !== bitmap) scaled.recycle()
+            bitmap.recycle()
+            out.toByteArray()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun scaleDown(b: android.graphics.Bitmap, max: Int): android.graphics.Bitmap {
+        val longest = maxOf(b.width, b.height)
+        if (longest <= max) return b
+        val f = max.toFloat() / longest
+        return android.graphics.Bitmap.createScaledBitmap(
+            b, (b.width * f).toInt().coerceAtLeast(1), (b.height * f).toInt().coerceAtLeast(1), true
+        )
     }
 }

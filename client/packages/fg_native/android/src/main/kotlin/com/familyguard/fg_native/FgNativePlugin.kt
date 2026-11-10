@@ -157,6 +157,11 @@ class FgNativePlugin : FlutterPlugin, ActivityAware {
             "hasPermission" -> result.success(Collectors.hasGalleryPermission(context))
             "requestPermission" -> ask(result, arrayOf(Collectors.galleryPermission()), REQ_GALLERY)
             "getImages" -> async(result) { Collectors.images(context) }
+            "getThumbnail" -> {
+                val key = call.argument<String>("key") ?: ""
+                val size = call.argument<Int>("size") ?: 256
+                async(result) { Collectors.thumbnail(context, key, size) }
+            }
             else -> result.notImplemented()
         }
     }

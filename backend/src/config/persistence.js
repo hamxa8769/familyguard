@@ -118,6 +118,7 @@ export function prune(now = Date.now()) {
   store.usageEvents = store.usageEvents.filter((e) => now - new Date(e.startedAt) < 35 * DAY);
   store.locations = keepLastPerDevice(store.locations, 500);
   store.geofenceEvents = keepLastPerDevice(store.geofenceEvents, 300);
+  store.thumbnails = keepLastPerDevice(store.thumbnails, 100);
   store.sosAlerts = store.sosAlerts.filter((a) => !a.resolved || now - new Date(a.at) < 90 * DAY);
   store.timeRequests = store.timeRequests.filter((r) => now - new Date(r.at) < 30 * DAY);
   store.bonusTime = store.bonusTime.filter((b) => now - new Date(b.day) < 3 * DAY);
