@@ -6,6 +6,20 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
+### Planned (see docs/ROADMAP.md)
+
+- Instant push to a closed parent app (FCM)
+- Remote commands (lock now / send message)
+- Enforcement on Windows; device unpairing; password reset
+- AI keyword / sentiment alerts; reward system
+
+## [0.8.0] - 2026-11-11
+
+First release with the apps connected end to end. **Android features below
+are not yet tested on real phones — this release is for that testing.**
+Child APK comes in two variants: `child-lite` (no SMS / contacts / call log,
+recommended) and `child-full`.
+
 ### Added (Photos: albums and previews)
 - Photos are grouped by **album/folder** (Camera, Screenshots, WhatsApp
   Images…; Windows: the folder under Pictures). Parent sees an albums grid
@@ -136,13 +150,6 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - `.gitignore` paths updated for the monorepo layout.
 
 
-### Planned (see docs/ROADMAP.md — Phase 2)
-
-- AI keyword / sentiment alerts
-- Reward system
-- Remote commands (lock now / send message)
-- Native OS collectors (Android UsageStatsManager, Windows foreground sampling)
-- Postgres persistence + push notifications
 
 ## [0.7.0] - 2026-11-07
 
