@@ -13,6 +13,16 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - Enforcement on Windows; device unpairing; password reset
 - AI keyword / sentiment alerts; reward system
 
+## [0.8.1] - 2026-11-11
+
+### Added
+- **Test from any network:** `npm run public` (backend) starts the server and a
+  Cloudflare quick tunnel and prints a public `https://…trycloudflare.com`
+  address. Phones no longer need to be on the PC's Wi-Fi.
+- **Change the server address without re-pairing:** Parent → Settings →
+  Server address; Child → ⋮ → Server address. The new address is checked
+  (`/health`) before it is saved; the saved sign-in stays valid.
+
 ## [0.8.0] - 2026-11-11
 
 First release with the apps connected end to end. **Android features below

@@ -4,3 +4,4 @@ library familyguard_ui;
 
 export 'src/ui/app_theme.dart';
 export 'src/ui/fg_widgets.dart';
+export 'src/ui/server_dialog.dart';

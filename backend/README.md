@@ -15,6 +15,7 @@ Server starts on `http://localhost:4000`. Health check: `GET /health`.
 
 ```bash
 npm test     # API + persistence tests (starts its own in-memory server)
+npm run public  # server + public HTTPS address (Cloudflare quick tunnel) for testing from any network
 ```
 
 ## Data storage

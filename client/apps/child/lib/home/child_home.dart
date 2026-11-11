@@ -139,6 +139,25 @@ class _ChildHomeState extends State<ChildHome> with WidgetsBindingObserver {
                     icon: const Icon(Icons.sync_rounded),
                     onPressed: _sync.syncNow,
                   ),
+                  PopupMenuButton<String>(
+                    tooltip: 'More',
+                    onSelected: (v) async {
+                      if (v == 'server' && await showServerDialog(context)) {
+                        await _sync.syncNow();
+                        await _load();
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'server',
+                        child: ListTile(
+                          leading: Icon(Icons.dns_outlined),
+                          title: Text('Server address'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               ValueListenableBuilder<SyncStatus>(

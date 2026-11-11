@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
 import '../state/app_controller.dart';
+import '../state/parent_state.dart';
 import '../theme/app_theme.dart';
 import '../ui/fg_widgets.dart';
 
@@ -48,6 +49,29 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SectionLabel('Server'),
+          StatefulBuilder(
+            builder: (context, setLocal) => FgCard(
+              padding: EdgeInsets.zero,
+              onTap: () async {
+                if (await showServerDialog(context)) {
+                  setLocal(() {});
+                  await ParentState.instance.refresh();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Server address updated')));
+                  }
+                }
+              },
+              child: ListTile(
+                leading: const Icon(Icons.dns_outlined),
+                title: const Text('Server address'),
+                subtitle: Text(auth.api.baseUrl,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: const Icon(Icons.edit_outlined),
+              ),
             ),
           ),
           const SectionLabel('Appearance'),
