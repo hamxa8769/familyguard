@@ -47,6 +47,25 @@ third parties):
   APK**, not Play.
 - **Minimisation still applies.** No photos, camera or microphone access.
 
+## 2b. Rules enforced on the phone
+
+Enforcement is built so it can never be mistaken for hidden control:
+
+- **Visible:** a permanent "FamilyGuard is active" notification shows the rule
+  state and time left; the web filter shows Android's VPN key icon.
+- **Agreed:** the consent notice (v3) lists every rule type; the child must
+  accept it again when rules were added. Each permission (usage access,
+  display over other apps, VPN) is granted by the child in a system dialog.
+- **Never total:** calls, the home screen, Settings and FamilyGuard itself are
+  never paused, so the child can always phone someone and see what applies.
+- **Two-way:** a paused screen always explains why and links to "Ask for more
+  time"; the parent sees whether rules are actually enforced on the device.
+- **No accessibility abuse, no anti-uninstall:** FamilyGuard does not use an
+  accessibility service, does not hide its icon, and does not block its own
+  removal. It is a family tool, not a lock the child can't understand.
+- **Web filter privacy:** only domain names are checked, on the phone; nothing
+  about browsing is logged or uploaded.
+
 ## 3. Legal context (discuss in your report)
 
 - Monitoring a **minor child you are the guardian of** is generally lawful; secret

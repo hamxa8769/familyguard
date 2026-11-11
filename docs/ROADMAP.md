@@ -54,9 +54,18 @@ This is the honest, demonstrable scope for a cross-platform project.
 
 ## Phase 3 — Hardening
 
-- [ ] Postgres migrations + real persistence
-- [ ] Automated tests (backend + widget tests)
-- [ ] CI (GitHub Actions)
+- [x] Apps wired to the API (auth, pairing, sync, all parent screens)
+- [x] Device-level access control
+- [x] Background sync when the child app is closed (WorkManager, ~15 min)
+- [x] Persistent storage (JSON file or PostgreSQL) + generated JWT secret
+- [x] Backend test suite in CI
+- [x] Play Protect: lite child build without SMS/contacts/calls + release signing
+- [x] Parent notifications without Firebase (30 s while open, ~15 min closed)
+- [ ] Instant push to a closed parent app (FCM — needs a Firebase project)
+- [x] On-device enforcement on Android (app block, bedtime, limit, DNS web filter)
+- [ ] Test enforcement on real Android devices (several vendors / Android versions)
+- [x] Backend tests + CI (GitHub Actions)
+- [ ] Flutter widget tests
 - [ ] Per-platform native collector implementations
 
 ---

@@ -1,0 +1,22 @@
+name: fg_native
+description: FamilyGuard native Android collectors (usage, contacts/SMS/calls, location, media). Registered in every Flutter engine, so background sync can use them too.
+version: 0.1.0
+publish_to: "none"
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.familyguard.fg_native
+        pluginClass: FgNativePlugin

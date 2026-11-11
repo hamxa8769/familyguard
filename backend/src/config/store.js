@@ -1,5 +1,5 @@
-// Simple in-memory store so the API runs end-to-end before Postgres is wired up.
-// Swap each module's reads/writes to db.js query() when ready for persistence.
+// In-process data store used by every module. It is loaded from and saved to
+// disk or PostgreSQL by config/persistence.js, so data survives restarts.
 export const store = {
   users: [],
   children: [],        // child profiles (multi-child support)
@@ -18,7 +18,17 @@ export const store = {
   smsMessages: [],      // { deviceId, items: [{address, body, date, type}] }
   callLogs: [],         // { deviceId, items: [{number, type, date, duration}] }
   files: [],            // { deviceId, items: [{name, path, size, date, isImage}] }
+  thumbnails: [],       // { deviceId, key, mime, data(base64), at } — photo previews (opt-in)
+  timeRequests: [],     // { id, deviceId, minutes, reason, status, at, decidedAt }
+  bonusTime: [],        // { deviceId, day, minutes, requestId }
 };
+
+// Small key/value bag persisted with the data (e.g. the generated JWT secret).
+store.meta = {};
 
 let counter = 1;
 export const nextId = () => String(counter++);
+export const getCounter = () => counter;
+export const setCounter = (n) => {
+  counter = Math.max(counter, Number(n) || 1);
+};

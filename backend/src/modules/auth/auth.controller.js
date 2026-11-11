@@ -6,6 +6,12 @@ export async function register(req, res, next) {
     if (!email || !password || !role) {
       return res.status(400).json({ error: 'email, password and role are required' });
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ error: 'Enter a valid email address' });
+    }
+    if (String(password).length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
     const result = await authService.register({ email, password, displayName, role });
     res.status(201).json(result);
   } catch (err) {

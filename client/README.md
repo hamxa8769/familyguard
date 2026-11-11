@@ -28,6 +28,27 @@ cd client/apps/parent && flutter pub get && flutter run -d windows
 cd client/apps/child && flutter pub get && flutter run -d android
 ```
 
+### Connecting the apps
+
+1. Start the backend (`cd backend && npm install && npm start`, port 4000).
+2. Parent app → create an account → **Family** → add a child → show the QR.
+3. Child app → scan the QR (or type the code and set **Server**) → accept consent
+   → allow permissions.
+4. The child app shares data on start, every 15 minutes (also in the
+   background on Android), and on **Sync now**.
+
+**Server address**
+
+- Same Wi-Fi: `http://<PC LAN address>:4000` (e.g. `http://192.168.1.5:4000`).
+  Allow Node.js through Windows Firewall on *Private* networks.
+- From any network (mobile data, another Wi-Fi): run `cd backend && npm run public`
+  and use the `https://….trycloudflare.com` address it prints. It changes each
+  time the script starts — update it in the apps without re-pairing:
+  Parent → Settings → **Server address**, Child → ⋮ → **Server address**.
+- `localhost` only works on the same machine; `10.0.2.2` from the Android emulator.
+
+You can also bake in a default server: `flutter run --dart-define=API_BASE_URL=http://…`.
+
 ## Analyze (what CI runs)
 
 ```bash

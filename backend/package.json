@@ -1,12 +1,14 @@
 {
   "name": "familyguard-backend",
-  "version": "0.1.0",
+  "version": "0.8.1",
   "description": "Modular API for the FamilyGuard parental-control app",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test",
+    "public": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-public.ps1"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -15,5 +17,8 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

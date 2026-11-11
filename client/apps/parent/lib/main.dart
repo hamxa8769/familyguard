@@ -1,43 +1,34 @@
 import 'package:flutter/material.dart';
-import 'feature_registry.dart';
+import 'auth/login_screen.dart';
+import 'shell/app_shell.dart';
+import 'state/app_controller.dart';
+import 'theme/app_theme.dart';
 
-void main() => runApp(const ParentApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  AppController.instance.load();
+  runApp(const ParentApp());
+}
 
 class ParentApp extends StatelessWidget {
   const ParentApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FamilyGuard (Parent)',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      home: const ParentHome(),
-    );
-  }
-}
-
-/// Dashboard builds itself from the feature registry, so new features appear
-/// automatically.
-class ParentHome extends StatelessWidget {
-  const ParentHome({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final features = FeatureRegistry.all;
-    return Scaffold(
-      appBar: AppBar(title: const Text('FamilyGuard — Parent')),
-      body: ListView(
-        children: [
-          for (final f in features)
-            ListTile(
-              leading: Icon(f.icon),
-              title: Text(f.title),
-              subtitle: Text(f.description),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => f.buildScreen(context)),
-              ),
-            ),
-        ],
+    final app = AppController.instance;
+    return ListenableBuilder(
+      listenable: app,
+      builder: (context, _) => MaterialApp(
+        title: 'FamilyGuard (Parent)',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: app.themeMode,
+        home: !app.ready
+            ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+            : app.signedIn
+                ? const AppShell()
+                : LoginScreen(onSignedIn: app.signedInChanged),
       ),
     );
   }

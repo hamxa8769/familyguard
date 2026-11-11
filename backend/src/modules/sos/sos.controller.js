@@ -1,4 +1,5 @@
 import { store, nextId } from '../../config/store.js';
+import { accessibleDeviceIds } from '../../middleware/access.js';
 
 export async function triggerSos(req, res, next) {
   try {
@@ -25,7 +26,8 @@ export async function triggerSos(req, res, next) {
 
 export async function listAlerts(req, res, next) {
   try {
-    const alerts = store.sosAlerts.slice().reverse();
+    const allowed = new Set(accessibleDeviceIds(req.user));
+    const alerts = store.sosAlerts.filter((a) => allowed.has(a.deviceId)).reverse();
     res.json({ alerts });
   } catch (err) {
     next(err);
@@ -35,7 +37,9 @@ export async function listAlerts(req, res, next) {
 export async function resolveAlert(req, res, next) {
   try {
     const alert = store.sosAlerts.find((a) => a.id === req.params.id);
-    if (!alert) return res.status(404).json({ error: 'Alert not found' });
+    if (!alert || !accessibleDeviceIds(req.user).includes(alert.deviceId)) {
+      return res.status(404).json({ error: 'Alert not found' });
+    }
     alert.resolved = true;
     res.json(alert);
   } catch (err) {

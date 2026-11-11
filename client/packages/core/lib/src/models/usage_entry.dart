@@ -9,6 +9,7 @@ class UsageEntry {
 
   factory UsageEntry.fromMap(Map<dynamic, dynamic> map) => UsageEntry(
         (map['appName'] ?? 'Unknown').toString(),
-        (map['durationSeconds'] ?? 0) as int,
+        // Device sends durationSeconds; the server summary uses totalSeconds.
+        ((map['durationSeconds'] ?? map['totalSeconds'] ?? 0) as num).toInt(),
       );
 }

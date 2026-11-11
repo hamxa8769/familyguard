@@ -1,13 +1,12 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
+import 'package:familyguard_core/ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'consent/consent_screen.dart';
-import 'features/usage/usage_screen.dart';
-import 'features/location/location_screen.dart';
-import 'features/sos/sos_screen.dart';
-import 'features/messages/messages_screen.dart';
-import 'features/call_log/call_log_screen.dart';
-import 'features/gallery/gallery_screen.dart';
-import 'features/transparency/transparency_screen.dart';
+import 'home/child_home.dart';
+import 'pairing/pair_screen.dart';
+import 'permissions/permissions_screen.dart';
 
 void main() => runApp(const ChildApp());
 
@@ -18,85 +17,80 @@ class ChildApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'FamilyGuard (Child)',
-      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
-      home: const ConsentGate(),
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.dark,
+      home: const StartupGate(),
     );
   }
 }
 
-/// Monitoring features stay behind the consent gate — nothing runs until the
-/// child accepts the notice.
-class ConsentGate extends StatefulWidget {
-  const ConsentGate({super.key});
+/// Onboarding: 1 connect (pair) → 2 agree (consent) → 3 permissions → home.
+/// Nothing is collected or sent until consent is accepted.
+class StartupGate extends StatefulWidget {
+  const StartupGate({super.key});
   @override
-  State<ConsentGate> createState() => _ConsentGateState();
+  State<StartupGate> createState() => _StartupGateState();
 }
 
-class _ConsentGateState extends State<ConsentGate> {
-  final _consent = ConsentService();
-  bool? _consented;
+class _StartupGateState extends State<StartupGate> {
+  static const _setupKey = 'permissions_setup_done';
+
+  final _auth = AuthService.instance;
+  bool _loading = true;
+  bool _consented = false;
+  bool _setupDone = false;
 
   @override
   void initState() {
     super.initState();
-    _consent.hasConsented().then((v) => setState(() => _consented = v));
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _auth.load();
+    final consented = await ConsentService().hasConsented();
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _consented = consented;
+      // Only Android asks for runtime permissions.
+      _setupDone = !Platform.isAndroid || (prefs.getBool(_setupKey) ?? false);
+      _loading = false;
+    });
+  }
+
+  Future<void> _finishSetup() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_setupKey, true);
+    setState(() => _setupDone = true);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_consented == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    final Widget page;
+    if (_loading) {
+      page = const Scaffold(
+          key: ValueKey('loading'),
+          body: Center(child: CircularProgressIndicator()));
+    } else if (_auth.deviceId == null) {
+      page = PairScreen(
+          key: const ValueKey('pair'), onPaired: () => setState(() {}));
+    } else if (!_consented) {
+      page = ConsentScreen(
+        key: const ValueKey('consent'),
+        onAccepted: () => setState(() => _consented = true),
+      );
+    } else if (!_setupDone) {
+      page = PermissionsScreen(
+          key: const ValueKey('perms'), onDone: _finishSetup);
+    } else {
+      page = const ChildHome(key: ValueKey('home'));
     }
-    if (_consented == false) {
-      return ConsentScreen(onAccepted: () => setState(() => _consented = true));
-    }
-    return const ChildHome();
-  }
-}
-
-class ChildHome extends StatelessWidget {
-  const ChildHome({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final tiles = [
-      (Icons.bar_chart, 'My App Usage', 'See your own screen time',
-          const UsageScreen()),
-      (Icons.location_on, 'Location Sharing', 'What location is shared',
-          const LocationScreen()),
-      (Icons.sos, 'SOS', 'Send an emergency alert', const SosScreen()),
-      (Icons.sms, 'Messages & Contacts', 'What SMS/contacts are shared',
-          const MessagesScreen()),
-      (Icons.call, 'Call Log', 'What call history is shared',
-          const CallLogScreen()),
-      (Icons.photo_library, 'Gallery & Files', 'What photos/files are shared',
-          const GalleryScreen()),
-      (Icons.visibility, 'What My Parent Sees', 'Full transparency',
-          const TransparencyScreen()),
-    ];
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('FamilyGuard'),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            child: Center(child: Text('Monitoring: ON')),
-          ),
-        ],
-      ),
-      body: ListView(
-        children: [
-          for (final (icon, title, subtitle, screen) in tiles)
-            ListTile(
-              leading: Icon(icon),
-              title: Text(title),
-              subtitle: Text(subtitle),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => screen),
-              ),
-            ),
-        ],
-      ),
+    // Smooth cross-fade between onboarding steps.
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: page,
     );
   }
 }

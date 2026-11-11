@@ -1,4 +1,5 @@
 import { store } from '../../config/store.js';
+import { bonusMinutesToday } from './screentime.service.js';
 
 // Daily screen-time cap (minutes) per device.
 export async function setLimit(req, res, next) {
@@ -28,10 +29,14 @@ export async function getLimit(req, res, next) {
     const consumedSeconds = store.usageEvents
       .filter((e) => e.deviceId === req.params.deviceId && new Date(e.startedAt) >= startOfDay)
       .reduce((sum, e) => sum + e.durationSeconds, 0);
-    const dailyMinutes = limit?.dailyMinutes ?? null;
+    const bonusMinutes = bonusMinutesToday(req.params.deviceId);
+    // Today's allowance = daily limit + any approved extra time.
+    const dailyMinutes = limit?.dailyMinutes != null ? limit.dailyMinutes + bonusMinutes : null;
     const consumedMinutes = Math.round(consumedSeconds / 60);
     res.json({
       deviceId: req.params.deviceId,
+      baseMinutes: limit?.dailyMinutes ?? null,
+      bonusMinutes,
       dailyMinutes,
       consumedMinutes,
       remainingMinutes: dailyMinutes == null ? null : Math.max(0, dailyMinutes - consumedMinutes),

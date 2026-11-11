@@ -23,31 +23,48 @@ jobs:
         with:
           channel: stable
 
-      - name: Build CHILD apk
+      - name: Build CHILD apks (lite + full)
         working-directory: client/apps/child
         run: |
           flutter create --org com.familyguard --project-name familyguard_child --platforms=android .
-          # Child app reads usage stats, contacts and SMS — add the permissions.
           M=android/app/src/main/AndroidManifest.xml
-          PERMS='<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />\n    <uses-permission android:name="android.permission.READ_CONTACTS" />\n    <uses-permission android:name="android.permission.READ_SMS" />\n    <uses-permission android:name="android.permission.READ_CALL_LOG" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    '
-          grep -q READ_MEDIA_IMAGES "$M" || sed -i "s#<application#${PERMS}<application#" "$M"
           flutter pub get
+          # LITE: no SMS / contacts / call-log access (much less likely to be
+          # blocked by Play Protect). FULL: includes them.
+          python3 ../../../.github/scripts/android_manifest.py "$M" child-lite
+          flutter build apk --release --dart-define=FG_LITE=true
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/child-lite.apk"
+          python3 ../../../.github/scripts/android_manifest.py "$M" child-full
           flutter build apk --release
-      - run: cp client/apps/child/build/app/outputs/flutter-apk/app-release.apk familyguard-child-${{ github.ref_name }}.apk
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/child-full.apk"
 
       - name: Build PARENT apk
         working-directory: client/apps/parent
         run: |
           flutter create --org com.familyguard --project-name familyguard_parent --platforms=android .
+          python3 ../../../.github/scripts/android_manifest.py android/app/src/main/AndroidManifest.xml parent
           flutter pub get
           flutter build apk --release
-      - run: cp client/apps/parent/build/app/outputs/flutter-apk/app-release.apk familyguard-parent-${{ github.ref_name }}.apk
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/parent.apk"
+
+      - name: Sign APKs
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          S=.github/scripts/sign_apk.sh
+          bash $S "$RUNNER_TEMP/child-lite.apk" familyguard-child-lite-${{ github.ref_name }}.apk
+          bash $S "$RUNNER_TEMP/child-full.apk" familyguard-child-full-${{ github.ref_name }}.apk
+          bash $S "$RUNNER_TEMP/parent.apk" familyguard-parent-${{ github.ref_name }}.apk
 
       - name: Publish APKs to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            familyguard-child-${{ github.ref_name }}.apk
+            familyguard-child-lite-${{ github.ref_name }}.apk
+            familyguard-child-full-${{ github.ref_name }}.apk
             familyguard-parent-${{ github.ref_name }}.apk
           generate_release_notes: true
 

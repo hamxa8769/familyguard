@@ -16,6 +16,9 @@ import reportsRoutes from './modules/reports/reports.routes.js';
 import transparencyRoutes from './modules/transparency/transparency.routes.js';
 import commsRoutes from './modules/comms/comms.routes.js';
 import filesRoutes from './modules/files/files.routes.js';
+import pairingRoutes from './modules/pairing/pairing.routes.js';
+import requestsRoutes from './modules/requests/requests.routes.js';
+import feedRoutes from './modules/feed/feed.routes.js';
 
 export function registerRoutes(app) {
   app.use('/api/auth', authRoutes);
@@ -34,4 +37,7 @@ export function registerRoutes(app) {
   app.use('/api/transparency', transparencyRoutes);
   app.use('/api/comms', commsRoutes);
   app.use('/api/files', filesRoutes);
+  app.use('/api/pair', pairingRoutes);
+  app.use('/api/requests', requestsRoutes);
+  app.use('/api/feed', feedRoutes);
 }
