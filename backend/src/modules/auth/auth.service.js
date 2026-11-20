@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { store, nextId } from '../../config/store.js';
+import { jwtSecret } from '../../config/secrets.js';
 
 // NOTE: uses the in-memory store for now. Replace with db.js query() for Postgres.
 
@@ -42,7 +43,7 @@ export async function login({ email, password }) {
 function issueToken(user) {
   return jwt.sign(
     { id: user.id, role: user.role },
-    process.env.JWT_SECRET || 'dev-secret',
+    jwtSecret(),
     { expiresIn: '7d' }
   );
 }

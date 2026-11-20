@@ -15,6 +15,8 @@ class AppsModule implements FeatureModule {
   @override
   IconData get icon => Icons.apps;
   @override
+  FeatureSection get section => FeatureSection.activity;
+  @override
   Widget buildScreen(BuildContext context) => const AppsScreen();
 }
 

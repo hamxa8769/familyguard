@@ -18,6 +18,8 @@ class MediaModule implements FeatureModule {
   @override
   IconData get icon => Icons.photo_library;
   @override
+  FeatureSection get section => FeatureSection.activity;
+  @override
   Widget buildScreen(BuildContext context) => const MediaScreen();
 }
 

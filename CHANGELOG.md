@@ -6,7 +6,44 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 
 ## [Unreleased]
 
-## [0.7.1] - 2026-11-20
+### Planned (see docs/ROADMAP.md)
+
+- Instant push to a closed parent app (FCM)
+- Enforcement on Windows; device unpairing; password reset
+- Windows native collectors (screenshot, installed apps, browsing, lock)
+- Postgres migration of the older backend modules
+- ML/sentiment alerts (design only — no model bundled)
+- Device-owner setup for kiosk-grade enforcement (out of scope for sideload)
+
+## [0.9.0] - 2026-11-20
+
+This release merges the two lines that grew from v0.7.0: the 0.7.1 line
+(install fix, Phase 1 foundation, Phase 2 screen control + capture +
+standard features) and the 0.8.0/0.8.1 line (API-connected apps, UI phases,
+persistence, enforcement, photos, public tunnel). There was no 0.7.1 or
+0.8.2 release — both lines land here as 0.9.0 (child/parent 0.9.0+10,
+backend 0.9.0). The released 0.8.0/0.8.1 changes are listed in their own
+sections below; this section lists what the merge adds on top of them.
+
+### Merged
+- **One line again:** `origin/feat/connect-apps-to-api` (v0.8.1) merged
+  into `main`. Both feature sets are kept — nothing from either line was
+  discarded.
+- **Native collectors:** the child's `MainActivity` keeps the
+  `familyguard/*` MethodChannels (usage, comms, location, files, apps,
+  browsing, lock, screen, audio, enforcement); the `fg_native` plugin
+  registers the same collector channels for the background-sync isolate
+  and owns `familyguard/enforce`.
+- **Child home:** the new home (pair → consent → permissions → home) now
+  also links the 0.7.1 screens (Remote Commands, Installed Apps,
+  Browsing, Family Agreement, Rewards).
+- **Child APKs:** lite + full variants (Play Protect) with the committed
+  `android/` folders and the stable release keystore; the release job
+  no longer regenerates `android/` with `flutter create`.
+- **Release signing:** the new keystore (alias `familyguard`) is used for
+  all APKs from this release on; the Android job fails loudly if the
+  GitHub signing secrets are missing.
+
 
 ### Fixed
 - **Parent app "App not installed" (Android).** The `android/` folders are
@@ -17,11 +54,12 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
   (see [SIGNING.md](docs/SIGNING.md)). The release job now fails loudly
   if the signing secrets are missing, instead of publishing another
   debug-signed APK. Universal APK (not split-per-abi) for sideloading.
-  **New keystore from v0.7.1 (user choice):** the user had an old
+  **New keystore (user choice, 2026-11-20):** the user had an old
   keystore but chose to discard it; a new one (alias `familyguard`, RSA
-  2048, 10,000-day validity) was made for this release. Users updating
-  from v0.7.0 MUST uninstall the old Parent app first, then install
-  v0.7.1 fresh — in-place update from the old key is impossible.
+  2048, 10,000-day validity) was made for this release line. Users updating
+  from ANY earlier version (v0.7.0 or v0.8.x) MUST uninstall the old app
+  first, then install v0.9.0 fresh — in-place update from a different
+  signing key is impossible.
   The `windows/` folders are committed too, and the Windows release job
   is gated on the Android job, so a signing failure blocks the whole
   release instead of publishing a Windows-only one.
@@ -41,12 +79,14 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - **Push notifications (FCM, best-effort):** `src/services/pushService.js`;
   without `FCM_SERVER_KEY` push is skipped and polling still delivers
   commands. Device push tokens: `POST /api/devices/:id/push-token`.
-- **Consent v2:** consent gate + "What My Parent Sees" now list remote
-  commands, on-request screenshots and SOS-only short audio. Old v1
-  consent must be re-confirmed. ETHICS §2b documents the hard limits:
-  no continuous/ambient listening, no secret screenshots, no live camera.
-- **Backend tests:** `npm test` (23 tests: remote commands, media +
-  upload, consent v2, apps, browsing, agreement, rewards, keywords).
+- **Consent v5 (v0.9.0 merged notice):** consent gate + "What My Parent Sees"
+  now list remote commands, on-request screenshots and SOS-only short audio,
+  background sharing, on-device enforcement and optional photo previews.
+  Devices that consented on either line (0.7.1 v2 or 0.8.x v4) must
+  re-confirm once. ETHICS §2b documents the hard limits: no
+  continuous/ambient listening, no secret screenshots, no live camera.
+- **Backend tests:** `npm test` (39 tests: remote commands, media +
+  upload, consent v5, apps, browsing, agreement, rewards, keywords).
 - **Screen control (Android, real enforcement).** `lock_now` now locks
   via `DevicePolicyManager` (device admin, `force-lock` policy only,
   user-activated in a visible system screen). Bedtime + app-blocking
@@ -85,17 +125,154 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
   this VM — the sandbox blocks Java loopback TCP (`other_tcp: Deny`),
   which the Gradle daemon needs (see ROADMAP.md §Build verification).
   The APK build must be verified on a machine without that restriction
-  or via CI before the v0.7.1 release is cut.
+  or via CI before the v0.9.0 release is cut.
 
-### Planned (see docs/ROADMAP.md — Phase 2/3)
+## [0.8.1] - 2026-11-11
 
-- Windows native collectors (screenshot, installed apps, browsing, lock).
-- Postgres migration of the older backend modules.
-- FCM credentials (`FCM_SERVER_KEY`) for push.
-- ML/sentiment alerts (design only — no model bundled).
-- Device-owner setup for kiosk-grade enforcement (out of scope for sideload).
-- v0.7.1 tag + fresh install test on a real phone (needs the keystore
-  secrets from the user first).
+### Added
+- **Test from any network:** `npm run public` (backend) starts the server and a
+  Cloudflare quick tunnel and prints a public `https://…trycloudflare.com`
+  address. Phones no longer need to be on the PC's Wi-Fi.
+- **Change the server address without re-pairing:** Parent → Settings →
+  Server address; Child → ⋮ → Server address. The new address is checked
+  (`/health`) before it is saved; the saved sign-in stays valid.
+
+## [0.8.0] - 2026-11-11
+
+First release with the apps connected end to end. **Android features below
+are not yet tested on real phones — this release is for that testing.**
+Child APK comes in two variants: `child-lite` (no SMS / contacts / call log,
+recommended) and `child-full`.
+
+### Added (Photos: albums and previews)
+- Photos are grouped by **album/folder** (Camera, Screenshots, WhatsApp
+  Images…; Windows: the folder under Pictures). Parent sees an albums grid
+  with 2×2 covers → album grid → swipeable preview viewer.
+- **Photo previews (opt-in):** off by default; the parent turns them on per
+  device. The child app then uploads small previews (~256 px, JPEG from the
+  Android thumbnail cache / PNG on Windows) of the newest 100 photos, only
+  the ones the server asks for (30 per sync). Turning previews off deletes
+  them all. Local file paths are never stored on the server.
+- Child: consent v4 mentions previews; "What my parent sees" shows when on.
+- Backend: `PUT /api/files/:id/settings`, `POST /api/files/:id/thumbs`,
+  `GET /api/files/:id/thumb/:key`; tests cover access, opt-in and deletion.
+- Fix: Home quick-action tiles were very tall on wide screens.
+- Verified: fg_native (enforcement, web filter, thumbnails) and fg_notify
+  Kotlin code compiles (Gradle, Android release config).
+
+### Added (Phase 5 — enforcement on Android)
+- **Rules now apply on the child's phone.** A visible foreground service
+  ("FamilyGuard is active", with time left) watches the front app and shows a
+  "paused" screen for blocked apps, during bedtime, and when today's limit
+  (+ approved extra time) is used up. Calls, home screen, Settings and
+  FamilyGuard are never paused. Rules are cached on the phone (offline, and
+  restored after reboot).
+- **Web filter:** local DNS-only VPN (`DnsVpnService`) answers blocked domains
+  (and their subdomains) with NXDOMAIN; other lookups are forwarded unchanged.
+  Nothing is logged or uploaded.
+- **Permissions wizard:** "Display over other apps", "Web filter" (VPN approval)
+  and "Status notification" added, each with its reason.
+- **Parent sees whether rules are enforced:** the device reports its status
+  (`PUT /api/devices/:id/status`); rule screens show "Enforced on …" or which
+  permission the child still has to allow.
+- **Consent v3** describes the rules; children re-confirm.
+- No accessibility service is used (less likely to trip Play Protect).
+
+### Added (Phase 4 — system)
+- **Persistent storage.** Data survives restarts: JSON file by default, or
+  PostgreSQL via `DATABASE_URL` (JSONB per collection, created automatically).
+  Debounced writes of changed collections only, flush on shutdown, retention.
+- **No shared default secret.** JWT secret from `JWT_SECRET` or generated on
+  first start and stored with the data.
+- **Rate limiting** on login, sign-up and pairing; stricter sign-up validation
+  (valid email, 8+ character password).
+- **Backend tests** (`npm test`, 13 tests) run in CI.
+- **Background sync (Android).** Native collectors moved from MainActivity to
+  a local plugin (`packages/fg_native`) so WorkManager can sync about every
+  15 minutes while the child app is closed. Queries run off the UI thread.
+- **Consent v2.** The notice now says data is shared in the background; children
+  who accepted v1 are asked again.
+- **Play Protect.** Release builds a *lite* child APK (no SMS / contacts /
+  call log) and a *full* one; APKs are signed with your release key when the
+  keystore secrets are set. See docs/RELEASING.md.
+- **Parent notifications without Firebase.** New `GET /api/feed`; the parent
+  app checks it every 30 s while open and about every 15 min when closed
+  (Android WorkManager) and shows system notifications via a small local
+  plugin (`packages/fg_notify`). SOS uses a high-priority channel.
+
+### Fixed
+- Gallery query used `LIMIT` in the MediaStore sort order, which Android 11+
+  rejects. Local file paths are no longer uploaded (they can contain the
+  device user's name).
+
+### Added (UI/UX Phase 3 — child app)
+- Design system moved to the shared core package (`familyguard_core/ui.dart`)
+  so both apps share one look.
+- Onboarding: 1 Connect → 2 Agree → 3 Permissions, with progress steps.
+  Pair by scanning the parent's QR (`mobile_scanner`, Android) or typing the code.
+- Consent screen lists exactly what is shared and what is never collected.
+- Permissions wizard: one card per permission with its reason, allow or skip,
+  status re-checked on return from Settings; reachable later from Home.
+- New child Home: time left ring, bedtime, extra time granted, sync status,
+  hold-for-2-seconds SOS (progress ring + haptics), "What my parent sees".
+- Ask for more time: child picks +15/30/60 min with an optional reason;
+  parent approves or denies from Home banner / Alerts; approved minutes are
+  added to today's limit.
+- Parent tabs refresh when shown, so decisions show up everywhere.
+- Backend: `requests` module (`POST/GET /api/requests`,
+  `POST /api/requests/:id/decide`), bonus minutes in screen time and reports.
+
+### Added (UI/UX Phase 2 — parent app)
+- App usage: 7-day bar chart (days over the limit in red, limit line),
+  today / average / limit stats, per-app breakdown (`fl_chart`).
+- Location: OpenStreetMap map (`flutter_map`, dark tiles in dark mode) with
+  current position, recent trail and safe-zone circles.
+- Safe zones: tap the map to place a zone, size it with a slider, remove zones.
+- Alerts: All / SOS / Safe-zone filters, grouped by day, inline Resolve.
+- Screen time (ring + presets) and Bedtime (start/end tiles) redesigned.
+- Family: pairing QR code (`qr_flutter`) with server URL + code for the
+  child app; device rows show last-seen status.
+- Backend: `GET /api/usage/:deviceId/daily`, `DELETE /api/geofencing/zone/:id`.
+
+### Fixed
+- Daily report counted usage from all days as "today".
+- Release APKs had no INTERNET permission and blocked plain http://, so they
+  could not reach the server (or load map tiles). The release workflow now adds
+  INTERNET and allows cleartext for the LAN/dev server.
+
+### Added (UI/UX Phase 1 — parent app)
+- Design system: dark-first theme with light/auto mode, colour tokens
+  (accent + safe/warn/danger only), spacing scale, flat GPU-cheap surfaces.
+- Shared widgets: animated screen-time ring, usage bars, pulsing status dot,
+  skeleton loaders, quick actions, feature tiles.
+- 5-tab navigation (Home, Activity, Rules, Alerts, Family) built from the
+  feature registry; Settings screen with theme switch and sign out.
+- New Home: child switcher, live device status, SOS banner, screen-time ring
+  with top apps, location / safe-zone card, quick actions, rules summary.
+  Shows the cached report instantly and refreshes every minute.
+- Backend: devices report a `lastSeenAt` heartbeat.
+
+
+### Added
+- **Apps connected to the backend.** Parent sign-in/sign-up; children with
+  single-use pairing codes; child app pairs with the code, records consent on
+  the server and syncs usage, location, SMS/contacts/call log and file metadata
+  (on start, every 15 min while open, and "Sync now"). SOS is sent for real.
+- Every parent screen now reads/writes real data for the selected child device
+  (dashboard, location, screen time, app blocking, web filter, safe zones,
+  bedtime, messages, call log, gallery, alerts with resolve). Sample data removed.
+- Child "What My Parent Sees" loads the actual parent-side report.
+
+### Security
+- Device-level access control: only the owning parent or the device itself can
+  read a device's data; only the parent can change its rules. SOS list is
+  filtered per parent (previously returned every family's alerts).
+
+### Fixed
+- Usage sync no longer double-counts (today's totals are replaced, not appended).
+- JSON body limit raised to 5 MB so SMS/contacts/gallery syncs aren't rejected.
+- `.gitignore` paths updated for the monorepo layout.
+
 
 ## [0.7.0] - 2026-11-07
 

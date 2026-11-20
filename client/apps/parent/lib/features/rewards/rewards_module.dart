@@ -16,6 +16,8 @@ class RewardsModule implements FeatureModule {
   @override
   IconData get icon => Icons.emoji_events;
   @override
+  FeatureSection get section => FeatureSection.family;
+  @override
   Widget buildScreen(BuildContext context) => const RewardsScreen();
 }
 

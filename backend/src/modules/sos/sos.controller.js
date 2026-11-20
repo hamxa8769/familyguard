@@ -1,4 +1,5 @@
 import { store, nextId } from '../../config/store.js';
+import { accessibleDeviceIds } from '../../middleware/access.js';
 
 export async function triggerSos(req, res, next) {
   try {
@@ -25,7 +26,16 @@ export async function triggerSos(req, res, next) {
 
 export async function listAlerts(req, res, next) {
   try {
-    const alerts = store.sosAlerts.slice().reverse();
+    const allowed = new Set(accessibleDeviceIds(req.user));
+    // Device alerts the caller may see, plus keyword alerts owned by the
+    // calling parent (those have deviceId null; see keywords controller).
+    const alerts = store.sosAlerts
+      .filter(
+        (a) =>
+          allowed.has(a.deviceId) ||
+          (req.user.role === 'parent' && a.parentId === req.user.id),
+      )
+      .reverse();
     res.json({ alerts });
   } catch (err) {
     next(err);
@@ -35,7 +45,13 @@ export async function listAlerts(req, res, next) {
 export async function resolveAlert(req, res, next) {
   try {
     const alert = store.sosAlerts.find((a) => a.id === req.params.id);
-    if (!alert) return res.status(404).json({ error: 'Alert not found' });
+    const visible =
+      alert &&
+      (accessibleDeviceIds(req.user).includes(alert.deviceId) ||
+        (req.user.role === 'parent' && alert.parentId === req.user.id));
+    if (!visible) {
+      return res.status(404).json({ error: 'Alert not found' });
+    }
     alert.resolved = true;
     res.json(alert);
   } catch (err) {

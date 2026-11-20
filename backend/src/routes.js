@@ -23,6 +23,9 @@ import browsingRoutes from './modules/browsing/browsing.routes.js';
 import agreementRoutes from './modules/agreement/agreement.routes.js';
 import rewardsRoutes from './modules/rewards/rewards.routes.js';
 import keywordsRoutes from './modules/keywords/keywords.routes.js';
+import pairingRoutes from './modules/pairing/pairing.routes.js';
+import requestsRoutes from './modules/requests/requests.routes.js';
+import feedRoutes from './modules/feed/feed.routes.js';
 
 export function registerRoutes(app) {
   app.use('/api/auth', authRoutes);
@@ -48,4 +51,7 @@ export function registerRoutes(app) {
   app.use('/api/agreement', agreementRoutes);
   app.use('/api/rewards', rewardsRoutes);
   app.use('/api/keywords', keywordsRoutes);
+  app.use('/api/pair', pairingRoutes);
+  app.use('/api/requests', requestsRoutes);
+  app.use('/api/feed', feedRoutes);
 }

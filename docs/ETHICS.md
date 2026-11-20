@@ -74,9 +74,9 @@ enforced in code (see `backend/src/modules/media/`, `docs/ROADMAP.md`):
   There is no code path that records without a request, and no code
   path that hides a capture from the child.
 - **Retention:** captures auto-expire after 7 days (`MEDIA_RETENTION_DAYS`).
-- **Consent v2:** these features are listed in the consent notice and the
-  transparency screen. A device that consented under v1 must re-confirm
-  before any of them runs.
+- **Consent v5 (v0.9.0 merged notice):** these features are listed in the
+  consent notice and the transparency screen. A device that consented under
+  an older version must re-confirm before any of them runs.
 - **Auditability:** every request, capture and deletion is written to
   `audit_log`, which the child can read via `/api/transparency/:deviceId`.
 
@@ -122,6 +122,27 @@ one has a stated OS limit that the code does **not** work around:
 - **No continuous listening, no secret screenshots, no live camera,
   no stealth mode** — unchanged from §2b. None of the Phase 2 features
   adds a new capture capability.
+
+## 2d. Rules enforced on the phone
+
+Enforcement is built so it can never be mistaken for hidden control:
+
+- **Visible:** a permanent "FamilyGuard is active" notification shows the rule
+  state and time left; the web filter shows Android's VPN key icon.
+- **Agreed:** the consent notice (v5, v0.9.0 merged notice) lists every rule type; the child must
+  accept it again when rules were added. Each permission (usage access,
+  display over other apps, VPN) is granted by the child in a system dialog.
+- **Never total:** calls, the home screen, Settings and FamilyGuard itself are
+  never paused, so the child can always phone someone and see what applies.
+- **Two-way:** a paused screen always explains why and links to "Ask for more
+  time"; the parent sees whether rules are actually enforced on the device.
+- **No accessibility abuse, no anti-uninstall:** FamilyGuard does not use an
+  accessibility service, does not hide its icon, and does not block its own
+  removal. It is a family tool, not a lock the child can't understand.
+- **Web filter privacy:** only domain names are checked, on the phone; nothing
+  about browsing is logged or uploaded.
+
+## 3. Legal context (discuss in your report)
 
 - Monitoring a **minor child you are the guardian of** is generally lawful; secret
   monitoring of another adult generally is **not** and may be a criminal offence.

@@ -1,28 +1,50 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../network/api_client.dart';
 
 /// Tracks whether the on-device consent notice has been accepted.
-/// The child app checks this before starting any collection.
+/// Tracks whether the on-device consent notice has been accepted.
+/// The child app checks this before starting any collection, and the
+/// acceptance is also recorded on the server so the parent side has a record.
 ///
-/// Consent is versioned: v2 (0.7.1) adds remote commands, on-request
-/// screenshots and SOS-only short audio. A device that consented under v1
-/// must see the new notice and re-confirm before any new feature runs —
-/// the old key is deliberately not reused.
+/// The notice is versioned: when what FamilyGuard does changes (e.g. sharing
+/// in the background), [currentVersion] goes up and the child is asked again.
 class ConsentService {
-  /// Current consent version. Bump this whenever the consent text gains a
-  /// new data collection (and update the server-side consentVersion too).
-  static const currentVersion = '2';
+  /// v1: initial notice. v2: adds background sharing while the app is closed,
+  /// plus remote commands, on-request screenshots and SOS-only short audio
+  /// (0.7.1). v3: adds rules enforced on the phone (app blocking, limit,
+  /// bedtime, web). v4: adds optional photo previews (parent opt-in).
+  /// v5: the v0.9.0 merged notice — everything in v1-v4 in one text, so a
+  /// device that consented on either line is asked to re-confirm once.
+  static const currentVersion = 5;
 
-  static const _key = 'consent_accepted_at_v2';
+  static const _key = 'consent_accepted_at';
+  static const _versionKey = 'consent_version';
+  static const _syncedKey = 'consent_synced';
 
   Future<bool> hasConsented() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_key) != null;
+    if (prefs.getString(_key) == null) return false;
+    return (prefs.getInt(_versionKey) ?? 1) >= currentVersion;
   }
 
   Future<void> recordConsent() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, DateTime.now().toIso8601String());
-    // In the full app, also POST to /api/consent for a server-side record,
-    // with consentVersion: ConsentService.currentVersion.
+    await prefs.setInt(_versionKey, currentVersion);
+    await prefs.setBool(_syncedKey, false);
+  }
+
+  /// Sends the consent record to the server once (retried on later syncs).
+  Future<void> syncToServer(
+      ApiClient api, String deviceId, String acceptedText) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await hasConsented()) return;
+    if (prefs.getBool(_syncedKey) == true) return;
+    await api.post('/api/consent', {
+      'deviceId': deviceId,
+      'acceptedText': acceptedText,
+      'consentVersion': currentVersion.toString(),
+    });
+    await prefs.setBool(_syncedKey, true);
   }
 }

@@ -3,12 +3,15 @@ name: Release
 # Pushing a version tag (vX.Y.Z) builds both apps (child + parent) for Android
 # and Windows, and publishes a GitHub Release with all artifacts attached.
 #
-# Android install fix (v0.7.1): the android/ folders are committed, so every
-# build uses the same applicationId, minSdk/targetSdk and manifest. Release
-# APKs are signed with ONE stable keystore supplied via GitHub Secrets —
-# see docs/SIGNING.md. If the secrets are missing the Android job FAILS
-# loudly instead of silently publishing another debug-signed APK that
-# Android refuses to install ("App not installed").
+# Android install fix (v0.7.1, kept in the v0.9.0 merge): the android/
+# folders are committed, so every build uses the same applicationId,
+# minSdk/targetSdk and manifest. Release APKs are signed with ONE stable
+# keystore supplied via GitHub Secrets — see docs/SIGNING.md. If the
+# secrets are missing the Android job FAILS loudly instead of silently
+# publishing another debug-signed APK that Android refuses to install
+# ("App not installed"). The child app is built twice (lite without
+# SMS/contacts/call-log, full with them) and all APKs are re-signed
+# with apksigner as a second pass (see "Sign APKs").
 on:
   push:
     tags: ["v*"]
@@ -41,7 +44,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Build CHILD apk
+      - name: Build CHILD apks (lite + full)
         working-directory: client/apps/child
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -51,6 +54,8 @@ jobs:
         run: |
           # Signing config for the committed android/ folder (see docs/SIGNING.md).
           # The keystore + key.properties exist only in this runner, never in git.
+          # No `flutter create` here: the android/ folders are committed (v0.7.1
+          # install fix) and regenerating them would wipe the signing config.
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/familyguard-release.keystore
           cat > android/key.properties <<EOF
           storePassword=$ANDROID_KEYSTORE_PASSWORD
@@ -60,10 +65,15 @@ jobs:
           EOF
           flutter pub get
           flutter analyze --no-fatal-infos --no-fatal-warnings
-          # Universal APK (not --split-per-abi) so one file installs on any
-          # device when sideloaded.
+          # LITE: no SMS / contacts / call-log access (much less likely to be
+          # blocked by Play Protect). FULL: includes them.
+          M=android/app/src/main/AndroidManifest.xml
+          python3 ../../../.github/scripts/android_manifest.py "$M" child-lite
+          flutter build apk --release --dart-define=FG_LITE=true
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/child-lite.apk"
+          python3 ../../../.github/scripts/android_manifest.py "$M" child-full
           flutter build apk --release
-      - run: cp client/apps/child/build/app/outputs/flutter-apk/app-release.apk familyguard-child-${{ github.ref_name }}.apk
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/child-full.apk"
 
       - name: Build PARENT apk
         working-directory: client/apps/parent
@@ -73,6 +83,8 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          # Same committed-android/ signing setup as the child build; no
+          # `flutter create` (see above).
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/familyguard-release.keystore
           cat > android/key.properties <<EOF
           storePassword=$ANDROID_KEYSTORE_PASSWORD
@@ -80,14 +92,27 @@ jobs:
           keyAlias=$ANDROID_KEY_ALIAS
           storeFile=familyguard-release.keystore
           EOF
+          python3 ../../../.github/scripts/android_manifest.py android/app/src/main/AndroidManifest.xml parent
           flutter pub get
           flutter analyze --no-fatal-infos --no-fatal-warnings
           flutter build apk --release
-      - run: cp client/apps/parent/build/app/outputs/flutter-apk/app-release.apk familyguard-parent-${{ github.ref_name }}.apk
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/parent.apk"
+
+      - name: Sign APKs
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          S=.github/scripts/sign_apk.sh
+          bash $S "$RUNNER_TEMP/child-lite.apk" familyguard-child-lite-${{ github.ref_name }}.apk
+          bash $S "$RUNNER_TEMP/child-full.apk" familyguard-child-full-${{ github.ref_name }}.apk
+          bash $S "$RUNNER_TEMP/parent.apk" familyguard-parent-${{ github.ref_name }}.apk
 
       - name: Verify APK identities
         run: |
-          for apk in familyguard-child-${{ github.ref_name }}.apk familyguard-parent-${{ github.ref_name }}.apk; do
+          for apk in familyguard-child-lite-${{ github.ref_name }}.apk familyguard-child-full-${{ github.ref_name }}.apk familyguard-parent-${{ github.ref_name }}.apk; do
             echo "== $apk"
             AAPT=$(find "${ANDROID_SDK_ROOT:-$HOME/Android/sdk}" -name aapt2 -type f 2>/dev/null | head -1) || true
             if [ -n "$AAPT" ]; then "$AAPT" dump badging "$apk" | grep -E "package: name|application-label" || true; fi
@@ -99,7 +124,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            familyguard-child-${{ github.ref_name }}.apk
+            familyguard-child-lite-${{ github.ref_name }}.apk
+            familyguard-child-full-${{ github.ref_name }}.apk
             familyguard-parent-${{ github.ref_name }}.apk
           generate_release_notes: true
 

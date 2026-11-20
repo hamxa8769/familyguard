@@ -21,6 +21,13 @@ class CallLogEntry {
         _ => 'Incoming',
       };
 
+  Map<String, dynamic> toMap() => {
+        'number': number,
+        'type': type,
+        'date': dateMillis,
+        'duration': durationSeconds,
+      };
+
   factory CallLogEntry.fromMap(Map<dynamic, dynamic> map) => CallLogEntry(
         number: (map['number'] ?? '').toString(),
         type: (map['type'] ?? 1) is int

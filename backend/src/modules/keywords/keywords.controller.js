@@ -63,11 +63,14 @@ export async function scanText(req, res, next) {
       return res.json({ matched: [], alertCreated: false });
     }
     // Same shape as the SOS alerts collection, plus keyword context.
-    // deviceId is null: a text scan has no single device attached.
+    // deviceId is null: a text scan has no single device attached. The
+    // owning parent is recorded from the keyword list so the alert is
+    // visible in that parent's SOS list (which is filtered per parent).
     const alert = {
       id: nextId(),
       deviceId: null,
       childId,
+      parentId: list?.updatedBy ?? null,
       message: `Keyword match: ${matched.join(', ')}`,
       source: source ?? null,
       matchedKeywords: matched,

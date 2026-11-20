@@ -16,7 +16,15 @@ export async function whatParentSees(req, res, next) {
         'Remote commands from your parent (lock now, unlock, messages) — every command is listed in the audit log below',
         'Screenshots taken only after a notification and countdown on this device (never secret)',
         'Short audio clips (max 30 seconds) only when you press SOS or after a visible request — never continuous listening',
+        'Your SMS messages (sender, text and time)',
+        'Your contacts (names and numbers)',
+        'Your call history (number, type, time, duration)',
+        'Your photos and files (name, album, size, date)',
+        ...(req.device?.photoPreviews
+          ? ['Small previews of your newest 100 photos (your parent turned this on)']
+          : []),
       ],
+      photoPreviews: req.device?.photoPreviews === true,
       report,
     });
   } catch (err) {

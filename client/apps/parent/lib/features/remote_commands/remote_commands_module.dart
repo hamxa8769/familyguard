@@ -20,6 +20,8 @@ class RemoteCommandsModule implements FeatureModule {
   @override
   IconData get icon => Icons.send_to_mobile;
   @override
+  FeatureSection get section => FeatureSection.rules;
+  @override
   Widget buildScreen(BuildContext context) => const RemoteCommandsScreen();
 }
 

@@ -15,6 +15,8 @@ class AgreementModule implements FeatureModule {
   @override
   IconData get icon => Icons.rule;
   @override
+  FeatureSection get section => FeatureSection.family;
+  @override
   Widget buildScreen(BuildContext context) => const AgreementScreen();
 }
 

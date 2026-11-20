@@ -15,7 +15,7 @@ A transparent, consent-based parental-control app. One Flutter codebase for
 - [x] Auth (JWT) + consent gate + device registration
 - [x] In-memory store (swap to Postgres later)
 
-## Phase 0.1 — Install fix ✅ (v0.7.1, 2026-11-20)
+## Phase 0.1 — Install fix ✅ (v0.9.0, 2026-11-20)
 
 The Parent app showed "App not installed" on Android. Root cause: no
 `android/` folder was committed — the release workflow regenerated it on
@@ -42,10 +42,11 @@ config, so it was debug-signed and could not reliably install/update.
   passwords live only in a local secure note
   (`SIGNING_SECRETS.local.md`, git-ignored, never committed).
 - [x] Universal APK (not `--split-per-abi`) for sideloading.
-- [x] Version bumped to 0.7.1+8.
-- [ ] Still needs the user: create the keystore and add the four
-  `ANDROID_*` secrets (docs/SIGNING.md), then cut the v0.7.1 tag and
-  install the Parent APK fresh on the phone to confirm the fix.
+- [x] Version bumped to 0.9.0+10 (v0.9.0 merge of the 0.7.1+8 and 0.8.1+9 lines).
+- [ ] Still needs the user: add the four `ANDROID_*` secrets to GitHub
+  (docs/SIGNING.md — the new keystore itself was created and verified
+  2026-11-20), then cut the v0.9.0 tag and install the Parent APK fresh
+  on the phone to confirm the fix.
 
 ## Phase 1 — Core features (this build) — 11 features
 
@@ -63,7 +64,7 @@ config, so it was debug-signed and could not reliably install/update.
 | 10 | **Multi-child support** | ✅ | ✅ | one family, many children |
 | 11 | **Two-way transparency** (unique) | ✅ | ✅ | child sees exactly what parent sees |
 
-## Phase 1.1 — Foundation for screen control, screenshots & SOS audio 🚧 (v0.7.1)
+## Phase 1.1 — Foundation for screen control, screenshots & SOS audio 🚧 (v0.9.0)
 
 The remaining features the user asked for are **not** built as silent
 surveillance. The rules are in [ETHICS.md](ETHICS.md) §2b and are enforced
@@ -107,9 +108,9 @@ sessions (UsageEvents), device-admin lock, MediaProjection screenshots and
 MediaRecorder SOS audio, and the bedtime/app-blocking watcher service.
 Windows native collectors are still TODOs (see below).
 
-## Phase 2 — Screen control, capture & the remaining standard features ✅ (v0.7.1)
+## Phase 2 — Screen control, capture & the remaining standard features ✅ (v0.9.0)
 
-Implemented in the same 0.7.1 branch (2026-11-20). Everything below is
+Implemented in the 0.7.1 branch (2026-11-20), released as v0.9.0. Everything below is
 behind the same consent + transparency rules as Phase 1.1.
 
 ### Screen control (real enforcement, Android)
@@ -187,7 +188,7 @@ behind the same consent + transparency rules as Phase 1.1.
   Enterprise) — out of scope for the sideloaded build.
 - [ ] **Release verification on a real phone** — the release APK build
   could not be verified in this VM (see "Build verification" below);
-  the v0.7.1 tag + fresh install test still need the user.
+  the v0.9.0 tag + fresh install test still need the user.
 
 ### Build verification (honest status, 2026-11-20)
 
@@ -196,8 +197,8 @@ behind the same consent + transparency rules as Phase 1.1.
   is deprecated in Flutter 3.50 in favour of `material_ui` (affects every
   file in the repo, pre-existing pattern, not introduced here).
 - `flutter test` (child + parent widget tests): **4/4 pass**.
-- Backend `npm test`: **23/23 pass** (remote commands, media + upload,
-  consent v2, and the five Phase 2 modules).
+- Backend `npm test`: **39/39 pass** (remote commands, media + upload,
+  consent v5, and the five Phase 2 modules).
 - Kotlin native code: **compiles clean** with standalone `kotlinc 2.1.20`
   against API 36 + the Flutter embedding + androidx (exit 0; only
   deprecation warnings for `UsageEvents` constants and
@@ -219,9 +220,18 @@ behind the same consent + transparency rules as Phase 1.1.
 ## Phase 3 — Hardening
 
 - [ ] Postgres migrations for the older modules (via the repository layer)
-- [x] Automated tests (backend: `npm test` — 23 tests: remote commands, media + upload, consent v2, apps, browsing, agreement, rewards, keywords)
-- [x] Widget tests (Flutter — child + parent, 4 tests)
+- [x] Apps wired to the API (auth, pairing, sync, all parent screens)
+- [x] Device-level access control
+- [x] Background sync when the child app is closed (WorkManager, ~15 min)
+- [x] Persistent storage (JSON file or PostgreSQL) + generated JWT secret
+- [x] Backend test suite in CI (backend: `npm test` — remote commands, media + upload, consent, apps, browsing, agreement, rewards, keywords, API, persistence)
+- [x] Widget tests (Flutter — child + parent, 4 tests; run in CI)
 - [x] CI (GitHub Actions) — analyze + backend tests + widget tests on push; release job runs analyze before building
+- [x] Play Protect: lite child build without SMS/contacts/calls + release signing
+- [x] Parent notifications without Firebase (30 s while open, ~15 min closed)
+- [ ] Instant push to a closed parent app (FCM — needs a Firebase project)
+- [x] On-device enforcement on Android (app block, bedtime, limit, DNS web filter)
+- [ ] Test enforcement on real Android devices (several vendors / Android versions)
 - [x] Per-platform native collector implementations (Android: screenshot, SOS audio, lock, installed apps, browsing sessions; Windows still TODO)
 
 ---

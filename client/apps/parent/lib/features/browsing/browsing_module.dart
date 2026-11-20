@@ -15,6 +15,8 @@ class BrowsingModule implements FeatureModule {
   @override
   IconData get icon => Icons.language;
   @override
+  FeatureSection get section => FeatureSection.activity;
+  @override
   Widget buildScreen(BuildContext context) => const BrowsingScreen();
 }
 

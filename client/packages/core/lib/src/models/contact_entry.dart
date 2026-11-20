@@ -5,6 +5,8 @@ class ContactEntry {
   final String name;
   final String number;
 
+  Map<String, dynamic> toMap() => {'name': name, 'number': number};
+
   factory ContactEntry.fromMap(Map<dynamic, dynamic> map) => ContactEntry(
         (map['name'] ?? '').toString(),
         (map['number'] ?? '').toString(),

@@ -1,5 +1,12 @@
 package com.familyguard.familyguard_child
 
+// NOTE (v0.9.0 merge): this host keeps the MethodChannel implementations
+// (familyguard/usage, comms, location, files, apps, browsing, lock, screen,
+// audio, enforcement) that the child Dart collectors call. The fg_native
+// plugin registers the same four collector channels for the background-sync
+// isolate; in the foreground this activity registers after
+// super.configureFlutterEngine(), so its handlers win here, while the plugin
+// serves background calls. 'familyguard/enforce' belongs to fg_native only.
 import android.Manifest
 import android.app.Activity
 import android.app.AppOpsManager

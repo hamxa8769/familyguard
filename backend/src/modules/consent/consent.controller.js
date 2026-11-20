@@ -11,8 +11,10 @@ export async function recordConsent(req, res, next) {
       id: nextId(),
       deviceId,
       acceptedText,
-      // v2 covers the new features (remote commands, on-request screenshot,
-      // SOS-only short audio). Old v1 consent must be re-confirmed in-app.
+      // v5 (0.9.0 merged notice) covers everything in v1-v4: background
+      // sharing, remote commands, on-request screenshot, SOS-only short
+      // audio, on-device enforcement and optional photo previews. A device
+      // that consented under an older version must re-confirm in-app.
       consentVersion: consentVersion || '1',
       acceptedBy: req.user.id,
       acceptedAt: new Date().toISOString(),

@@ -18,6 +18,8 @@ class KeywordsModule implements FeatureModule {
   @override
   IconData get icon => Icons.key;
   @override
+  FeatureSection get section => FeatureSection.alerts;
+  @override
   Widget buildScreen(BuildContext context) => const KeywordsScreen();
 }
 

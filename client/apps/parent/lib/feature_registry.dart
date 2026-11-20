@@ -19,21 +19,21 @@ import 'features/agreement/agreement_module.dart';
 import 'features/rewards/rewards_module.dart';
 import 'features/keywords/keywords_module.dart';
 
-/// The single list of parent-side features. Add a new feature here and it
-/// appears in the dashboard automatically — nothing else changes.
+/// The single list of parent-side features. Add a new feature here (with its
+/// [FeatureSection]) and it appears in the right tab automatically.
 class FeatureRegistry {
   static final List<FeatureModule> all = [
     DashboardModule(),
-    ChildrenModule(),
     LocationModule(),
-    ScreenTimeModule(),
-    AppBlockingModule(),
-    WebFilterModule(),
-    GeofencingModule(),
-    BedtimeModule(),
     MessagesModule(),
     CallLogModule(),
     GalleryModule(),
+    ScreenTimeModule(),
+    AppBlockingModule(),
+    WebFilterModule(),
+    BedtimeModule(),
+    GeofencingModule(),
+    ChildrenModule(),
     AlertsModule(),
     RemoteCommandsModule(),
     MediaModule(),
@@ -43,4 +43,11 @@ class FeatureRegistry {
     RewardsModule(),
     KeywordsModule(),
   ];
+
+  static FeatureModule? byId(String id) {
+    for (final m in all) {
+      if (m.id == id) return m;
+    }
+    return null;
+  }
 }
