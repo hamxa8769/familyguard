@@ -160,15 +160,19 @@ class DnsVpnService : VpnService() {
          * names through the configured private resolver instead. Reported
          * in the enforcement status blob so the parent can be warned.
          */
+        // NOTE: Settings.Global.PRIVATE_DNS_MODE / PRIVATE_DNS_HOSTNAME are
+        // @hide, so they are absent from the public SDK stubs (compileSdk 36
+        // still fails to resolve them). The string keys below are their
+        // stable values; getString returns null on API < 28 or when unset.
         fun privateDnsMode(ctx: Context): String? = try {
-            Settings.Global.getString(ctx.contentResolver, Settings.Global.PRIVATE_DNS_MODE)
+            Settings.Global.getString(ctx.contentResolver, "private_dns_mode")
         } catch (_: Exception) {
             null
         }
 
         /** The hostname above when [privateDnsMode] is "hostname". */
         fun privateDnsHostname(ctx: Context): String? = try {
-            Settings.Global.getString(ctx.contentResolver, Settings.Global.PRIVATE_DNS_HOSTNAME)
+            Settings.Global.getString(ctx.contentResolver, "private_dns_hostname")
         } catch (_: Exception) {
             null
         }

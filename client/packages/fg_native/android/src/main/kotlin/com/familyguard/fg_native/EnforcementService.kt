@@ -166,7 +166,9 @@ class EnforcementService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setShowBadge(false)
+            // NOTE: no setShowBadge here — NotificationCompat.Builder has no
+            // such method; the badge is disabled on the channel instead
+            // (createChannel below), which is the valid API.
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(open)
             .build()
