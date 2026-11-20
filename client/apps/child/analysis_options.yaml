@@ -4,3 +4,6 @@ analyzer:
   errors:
     prefer_const_constructors: ignore
     use_super_parameters: ignore
+  exclude:
+    - build/**
+    - android/**

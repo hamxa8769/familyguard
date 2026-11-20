@@ -15,6 +15,22 @@ class TransparencyScreen extends StatelessWidget {
     'Your contacts (names and numbers)',
     'Your call history (number, type, time, duration)',
     'Your photos and files (name, size, date)',
+    'Remote commands from your parent (lock now, unlock, messages)',
+    'Screenshots taken only after a notification and countdown on this device',
+    'Short audio clips (max 30 seconds) only when you press SOS or after a visible request',
+    'Which apps are installed on this device',
+    'Browser sessions: which browser was open, when, and for how long (never the pages or URLs)',
+    'Bedtime and app-blocking rules your parent set, and when they block an app',
+    'The family agreement you signed (or declined)',
+    'Reward points and badges you earned',
+  ];
+
+  static const _notCollected = [
+    'Live camera capture',
+    'Continuous or ambient microphone listening',
+    'Secret screenshots (every screenshot is announced first)',
+    'The web pages or URLs you visit',
+    'The content of apps other than SMS, call log, contacts and gallery (as listed above)',
   ];
 
   @override
@@ -46,11 +62,12 @@ class TransparencyScreen extends StatelessWidget {
             ),
           const SizedBox(height: 8),
           Text('Not collected', style: Theme.of(context).textTheme.titleMedium),
-          const ListTile(
-            leading: Icon(Icons.not_interested),
-            title: Text('Live camera or microphone capture'),
-            dense: true,
-          ),
+          for (final item in _notCollected)
+            ListTile(
+              leading: const Icon(Icons.not_interested),
+              title: Text(item),
+              dense: true,
+            ),
         ],
       ),
     );

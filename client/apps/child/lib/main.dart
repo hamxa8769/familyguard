@@ -8,6 +8,11 @@ import 'features/messages/messages_screen.dart';
 import 'features/call_log/call_log_screen.dart';
 import 'features/gallery/gallery_screen.dart';
 import 'features/transparency/transparency_screen.dart';
+import 'features/remote_commands/remote_commands_screen.dart';
+import 'features/installed_apps/installed_apps_screen.dart';
+import 'features/browsing/browsing_screen.dart';
+import 'features/agreement/agreement_screen.dart';
+import 'features/rewards/rewards_screen.dart';
 
 void main() => runApp(const ChildApp());
 
@@ -71,6 +76,18 @@ class ChildHome extends StatelessWidget {
           const CallLogScreen()),
       (Icons.photo_library, 'Gallery & Files', 'What photos/files are shared',
           const GalleryScreen()),
+      (Icons.send_to_mobile, 'Remote Commands', 'Commands from your parent — nothing runs silently',
+          // TODO: pass the real registered deviceId once device
+          // registration lands; empty shows the not-registered state.
+          const RemoteCommandsScreen(deviceId: '')),
+      (Icons.apps, 'Installed Apps', 'Which apps are installed — synced by you',
+          const InstalledAppsScreen(deviceId: '')),
+      (Icons.language, 'Browsing History', 'Browser sessions only — never URLs',
+          const BrowsingScreen(deviceId: '')),
+      (Icons.rule, 'Family Agreement', 'Rules your family agreed on together',
+          const AgreementScreen(childId: '')),
+      (Icons.emoji_events, 'My Rewards', 'Points and badges for healthy habits',
+          const RewardsScreen(childId: '')),
       (Icons.visibility, 'What My Parent Sees', 'Full transparency',
           const TransparencyScreen()),
     ];

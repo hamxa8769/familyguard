@@ -16,6 +16,13 @@ import reportsRoutes from './modules/reports/reports.routes.js';
 import transparencyRoutes from './modules/transparency/transparency.routes.js';
 import commsRoutes from './modules/comms/comms.routes.js';
 import filesRoutes from './modules/files/files.routes.js';
+import remotecommandsRoutes from './modules/remotecommands/remotecommands.routes.js';
+import mediaRoutes from './modules/media/media.routes.js';
+import appsRoutes from './modules/apps/apps.routes.js';
+import browsingRoutes from './modules/browsing/browsing.routes.js';
+import agreementRoutes from './modules/agreement/agreement.routes.js';
+import rewardsRoutes from './modules/rewards/rewards.routes.js';
+import keywordsRoutes from './modules/keywords/keywords.routes.js';
 
 export function registerRoutes(app) {
   app.use('/api/auth', authRoutes);
@@ -34,4 +41,11 @@ export function registerRoutes(app) {
   app.use('/api/transparency', transparencyRoutes);
   app.use('/api/comms', commsRoutes);
   app.use('/api/files', filesRoutes);
+  app.use('/api/remotecommands', remotecommandsRoutes);
+  app.use('/api/media', mediaRoutes);
+  app.use('/api/apps', appsRoutes);
+  app.use('/api/browsing', browsingRoutes);
+  app.use('/api/agreement', agreementRoutes);
+  app.use('/api/rewards', rewardsRoutes);
+  app.use('/api/keywords', keywordsRoutes);
 }

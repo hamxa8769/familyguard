@@ -26,7 +26,7 @@ jobs:
         run: flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings
 
   backend-check:
-    name: Backend syntax check
+    name: Backend syntax check + tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,3 +39,21 @@ jobs:
       - name: Syntax check all modules
         working-directory: backend
         run: find src -name "*.js" -print0 | xargs -0 -n1 node --check && echo "All backend JS OK"
+      - name: Run backend tests (node --test, in-memory store)
+        working-directory: backend
+        run: npm test
+
+  flutter-tests:
+    name: Flutter widget tests (child + parent)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Test child app
+        working-directory: client/apps/child
+        run: flutter pub get && flutter test
+      - name: Test parent app
+        working-directory: client/apps/parent
+        run: flutter pub get && flutter test

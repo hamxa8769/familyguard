@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Device admin policies FamilyGuard requests. Only "force-lock" is used:
+     the "Lock now" remote command. No password policies, no wipe, no
+     camera/microphone disable — the app must never be able to do more than
+     lock the screen, and the admin is activated by the user in a visible
+     system screen, never silently. -->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <force-lock />
+    </uses-policies>
+</device-admin>

@@ -11,6 +11,13 @@ import 'features/messages/messages_module.dart';
 import 'features/call_log/call_log_module.dart';
 import 'features/gallery/gallery_module.dart';
 import 'features/alerts/alerts_module.dart';
+import 'features/remote_commands/remote_commands_module.dart';
+import 'features/media/media_module.dart';
+import 'features/apps/apps_module.dart';
+import 'features/browsing/browsing_module.dart';
+import 'features/agreement/agreement_module.dart';
+import 'features/rewards/rewards_module.dart';
+import 'features/keywords/keywords_module.dart';
 
 /// The single list of parent-side features. Add a new feature here and it
 /// appears in the dashboard automatically — nothing else changes.
@@ -28,5 +35,12 @@ class FeatureRegistry {
     CallLogModule(),
     GalleryModule(),
     AlertsModule(),
+    RemoteCommandsModule(),
+    MediaModule(),
+    AppsModule(),
+    BrowsingModule(),
+    AgreementModule(),
+    RewardsModule(),
+    KeywordsModule(),
   ];
 }

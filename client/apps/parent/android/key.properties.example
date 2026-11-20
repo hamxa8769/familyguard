@@ -1,0 +1,7 @@
+# Copy to key.properties and fill in real values. Never commit key.properties
+# or the keystore file — both are git-ignored. In CI this file is generated
+# from GitHub Secrets (see docs/SIGNING.md).
+storePassword=
+keyPassword=
+keyAlias=familyguard
+storeFile=familyguard-release.keystore

@@ -3,7 +3,7 @@ import { store, nextId } from '../../config/store.js';
 // Records that the person using the child device acknowledged the consent notice.
 export async function recordConsent(req, res, next) {
   try {
-    const { deviceId, acceptedText } = req.body;
+    const { deviceId, acceptedText, consentVersion } = req.body;
     if (!deviceId || !acceptedText) {
       return res.status(400).json({ error: 'deviceId and acceptedText are required' });
     }
@@ -11,6 +11,9 @@ export async function recordConsent(req, res, next) {
       id: nextId(),
       deviceId,
       acceptedText,
+      // v2 covers the new features (remote commands, on-request screenshot,
+      // SOS-only short audio). Old v1 consent must be re-confirmed in-app.
+      consentVersion: consentVersion || '1',
       acceptedBy: req.user.id,
       acceptedAt: new Date().toISOString(),
     };

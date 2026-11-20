@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_admin_description">Allows FamilyGuard to lock this device when a parent sends a "Lock now" command. FamilyGuard cannot wipe the device, change passwords, or disable the camera or microphone.</string>
+</resources>

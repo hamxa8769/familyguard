@@ -1,7 +1,7 @@
 name: familyguard_child
 description: FamilyGuard child/companion app — runs on the child's device.
 publish_to: "none"
-version: 0.7.0+7
+version: 0.7.1+8
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   familyguard_core:
     path: ../../packages/core
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:

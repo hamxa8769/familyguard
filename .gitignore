@@ -1,6 +1,14 @@
 # Node
 node_modules/
 backend/.env
+backend/uploads/
+
+# Android release signing — never commit the keystore or its passwords.
+*.jks
+*.keystore
+**/android/key.properties
+**/android/local.properties
+**/android/app/familyguard-release.keystore
 
 # Flutter
 client/.dart_tool/
@@ -8,7 +16,7 @@ client/build/
 client/.flutter-plugins
 client/.flutter-plugins-dependencies
 client/.packages
-client/pubspec.lock
+client/**/pubspec.lock
 
 # Editors / OS
 .idea/

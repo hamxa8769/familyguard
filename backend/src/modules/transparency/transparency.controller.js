@@ -13,6 +13,9 @@ export async function whatParentSees(req, res, next) {
         'Screen-time usage against the daily limit',
         'Geofence enter/exit events',
         'SOS alerts you trigger',
+        'Remote commands from your parent (lock now, unlock, messages) — every command is listed in the audit log below',
+        'Screenshots taken only after a notification and countdown on this device (never secret)',
+        'Short audio clips (max 30 seconds) only when you press SOS or after a visible request — never continuous listening',
       ],
       report,
     });

@@ -37,6 +37,14 @@ CI (`.github/workflows/release.yml`) then builds both apps for Android + Windows
 and attaches all four artifacts to the release at:
 `https://github.com/hamxa8769/familyguard/releases`
 
+## Before the first signed release (v0.7.1+)
+
+Android release builds need the signing secrets or the job fails — see
+[docs/SIGNING.md](SIGNING.md): create one release keystore and add
+`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` as repo secrets. The
+keystore and its passwords are never committed.
+
 ## Continuous checks
 
 Every push / PR runs `.github/workflows/ci.yml`:
