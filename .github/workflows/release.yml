@@ -28,7 +28,10 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          # JDK 21 (not 17): AGP 9's lint crashes on JDK 17 with
+          # `NoSuchMethodError: List.removeLast()` in lintVitalAnalyzeRelease
+          # (firebase_core triggers it); JDK 21 is what AGP 9 lint needs.
+          java-version: "21"
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
