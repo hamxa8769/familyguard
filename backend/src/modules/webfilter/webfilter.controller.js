@@ -1,4 +1,6 @@
 import { store } from '../../config/store.js';
+import { bumpRulesVersion } from '../devices/devices.controller.js';
+import { notifyRuleChange } from '../../services/pushService.js';
 
 export async function setFilter(req, res, next) {
   try {
@@ -12,6 +14,10 @@ export async function setFilter(req, res, next) {
     } else {
       store.webFilters.push({ deviceId: req.params.deviceId, blockedDomains });
     }
+    // Best-effort push so the child applies the new rules at once instead
+    // of waiting for its next 15-minute poll; never fails the request.
+    await notifyRuleChange(req.params.deviceId);
+    bumpRulesVersion(req.device);
     res.json({ deviceId: req.params.deviceId, blockedDomains });
   } catch (err) {
     next(err);

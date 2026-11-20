@@ -1,5 +1,7 @@
 import { store, nextId } from '../../config/store.js';
 import { accessibleDeviceIds } from '../../middleware/access.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
+import { notifyParentOfSos } from '../../services/pushService.js';
 
 export async function triggerSos(req, res, next) {
   try {
@@ -17,7 +19,11 @@ export async function triggerSos(req, res, next) {
       resolved: false,
     };
     store.sosAlerts.push(alert);
-    // In the full app this also fires a push notification to the parent.
+    // Best-effort push to the parent (see notifyParentOfSos in
+    // services/pushService.js for the targeting limits). The alert is
+    // already stored, so the parent also sees it by polling GET /api/feed
+    // even when no parent push token exists yet. Never fails the request.
+    await notifyParentOfSos({ deviceId, message: alert.message });
     res.status(201).json(alert);
   } catch (err) {
     next(err);
@@ -36,7 +42,8 @@ export async function listAlerts(req, res, next) {
           (req.user.role === 'parent' && a.parentId === req.user.id),
       )
       .reverse();
-    res.json({ alerts });
+    const { items, total, limit, offset } = pageOf(alerts, parseLimitOffset(req));
+    res.json({ alerts: items, total, limit, offset });
   } catch (err) {
     next(err);
   }

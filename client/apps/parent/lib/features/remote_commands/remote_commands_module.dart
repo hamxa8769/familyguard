@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
+import '../../common/widgets.dart';
 import '../../feature_module.dart';
+import '../../state/parent_state.dart';
 
 /// Parent side of remote commands: create lock/unlock/message commands and
 /// request a screenshot or a short SOS audio clip.
@@ -25,56 +27,58 @@ class RemoteCommandsModule implements FeatureModule {
   Widget buildScreen(BuildContext context) => const RemoteCommandsScreen();
 }
 
-class RemoteCommandsScreen extends StatefulWidget {
+class RemoteCommandsScreen extends StatelessWidget {
   const RemoteCommandsScreen({super.key});
 
   @override
-  State<RemoteCommandsScreen> createState() => _RemoteCommandsScreenState();
+  Widget build(BuildContext context) {
+    return DeviceScoped(
+      title: 'Remote Commands',
+      builder: (context, deviceId) => _RemoteCommandsBody(deviceId: deviceId),
+    );
+  }
 }
 
-class _RemoteCommandsScreenState extends State<RemoteCommandsScreen> {
-  final _api = ApiClient();
-  final _deviceId = TextEditingController();
+class _RemoteCommandsBody extends StatefulWidget {
+  const _RemoteCommandsBody({required this.deviceId});
+
+  final String deviceId;
+
+  @override
+  State<_RemoteCommandsBody> createState() => _RemoteCommandsBodyState();
+}
+
+class _RemoteCommandsBodyState extends State<_RemoteCommandsBody> {
+  ApiClient get _api => ParentState.instance.api;
   final _message = TextEditingController();
-  List<RemoteCommand> _commands = [];
   String? _status;
 
-  Future<void> _load() async {
-    if (_deviceId.text.isEmpty) return;
-    try {
-      final data = await _api.get('/api/remotecommands?deviceId=${_deviceId.text}');
-      setState(() {
-        _commands = (data['commands'] as List? ?? [])
-            .map((c) => RemoteCommand.fromMap(c as Map))
-            .toList();
-        _status = null;
-      });
-    } on ApiException catch (e) {
-      setState(() => _status = 'Could not load commands: ${e.message}');
-    }
+  Future<List<RemoteCommand>> _load() async {
+    final data = await _api.get('/api/remotecommands?deviceId=${widget.deviceId}');
+    return (data['commands'] as List? ?? [])
+        .map((c) => RemoteCommand.fromMap(c as Map))
+        .toList();
   }
 
-  Future<void> _create(String type, [Map<String, dynamic> payload = const {}]) async {
-    if (_deviceId.text.isEmpty) {
-      setState(() => _status = 'Enter a device ID first.');
-      return;
-    }
+  Future<void> _create(
+      String type, VoidCallback reload, [Map<String, dynamic> payload = const {}]) async {
     try {
       await _api.post('/api/remotecommands', {
-        'deviceId': _deviceId.text,
+        'deviceId': widget.deviceId,
         'type': type,
         'payload': payload,
       });
+      if (!mounted) return;
       setState(() => _status = 'Command sent — the child app polls for it.');
-      await _load();
+      reload();
     } on ApiException catch (e) {
+      if (!mounted) return;
       setState(() => _status = 'Could not send command: ${e.message}');
     }
   }
 
   @override
   void dispose() {
-    _deviceId.dispose();
     _message.dispose();
     super.dispose();
   }
@@ -83,63 +87,66 @@ class _RemoteCommandsScreenState extends State<RemoteCommandsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Remote Commands')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _deviceId,
-            decoration: const InputDecoration(labelText: 'Child device ID'),
-          ),
-          TextField(
-            controller: _message,
-            decoration: const InputDecoration(labelText: 'Message text (for Send message)'),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton(
-                onPressed: () => _create('lock_now'),
-                child: const Text('Lock now'),
-              ),
-              OutlinedButton(
-                onPressed: () => _create('unlock'),
-                child: const Text('Unlock'),
-              ),
-              OutlinedButton(
-                onPressed: () => _create('send_message', {'text': _message.text}),
-                child: const Text('Send message'),
-              ),
-              OutlinedButton(
-                onPressed: () => _create('request_screenshot'),
-                child: const Text('Request screenshot'),
-              ),
-              OutlinedButton(
-                onPressed: () => _create('request_audio', {'source': 'parent_request'}),
-                child: const Text('Request short audio (30s max)'),
-              ),
-              OutlinedButton(onPressed: _load, child: const Text('Refresh')),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Screenshots need a notification + countdown on the child device, '
-            'and audio is SOS-only / max 30 seconds with a visible indicator. '
-            'Nothing here captures silently.',
-          ),
-          if (_status != null) ...[
-            const SizedBox(height: 8),
-            Text(_status!),
-          ],
-          const SizedBox(height: 8),
-          for (final c in _commands)
-            ListTile(
-              leading: Icon(c.isPending ? Icons.hourglass_top : Icons.check_circle_outline),
-              title: Text('${c.type} — ${c.status}'),
-              subtitle: Text(c.createdAt ?? ''),
+      // ApiView (Phase 5): loading spinner, error + retry, and
+      // pull-to-refresh — previously silent load, inline error line only,
+      // and no empty state at all (an empty list showed a blank screen).
+      body: ApiView<List<RemoteCommand>>(
+        load: _load,
+        builder: (context, commands, reload) => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextField(
+              controller: _message,
+              decoration: const InputDecoration(labelText: 'Message text (for Send message)'),
             ),
-        ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: () => _create('lock_now', reload),
+                  child: const Text('Lock now'),
+                ),
+                OutlinedButton(
+                  onPressed: () => _create('unlock', reload),
+                  child: const Text('Unlock'),
+                ),
+                OutlinedButton(
+                  onPressed: () => _create('send_message', reload, {'text': _message.text}),
+                  child: const Text('Send message'),
+                ),
+                OutlinedButton(
+                  onPressed: () => _create('request_screenshot', reload),
+                  child: const Text('Request screenshot'),
+                ),
+                OutlinedButton(
+                  onPressed: () => _create('request_audio', reload, {'source': 'parent_request'}),
+                  child: const Text('Request short audio (30s max)'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Screenshots need a notification + countdown on the child device, '
+              'and audio is SOS-only / max 30 seconds with a visible indicator. '
+              'Nothing here captures silently.',
+            ),
+            if (_status != null) ...[
+              const SizedBox(height: 8),
+              Text(_status!),
+            ],
+            const SizedBox(height: 8),
+            if (commands.isEmpty)
+              const EmptyHint('No commands sent yet.'),
+            for (final c in commands)
+              ListTile(
+                leading: Icon(c.isPending ? Icons.hourglass_top : Icons.check_circle_outline),
+                title: Text('${c.type} — ${c.status}'),
+                subtitle: Text(c.createdAt ?? ''),
+              ),
+          ],
+        ),
       ),
     );
   }

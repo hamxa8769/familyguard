@@ -1,7 +1,7 @@
 name: familyguard_child
 description: FamilyGuard child/companion app — runs on the child's device.
 publish_to: "none"
-version: 0.9.0+10
+version: 0.9.1+11
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -16,6 +16,8 @@ dependencies:
   fg_native:
     path: ../../packages/fg_native
   workmanager: ^0.10.10
+  firebase_core: ^5.2.0
+  firebase_messaging: ^17.1.0
 
 dev_dependencies:
   flutter_test:

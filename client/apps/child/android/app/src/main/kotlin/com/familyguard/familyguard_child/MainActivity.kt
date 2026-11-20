@@ -57,7 +57,8 @@ import org.json.JSONObject
  *  - "familyguard/screen": on-request screenshot (MediaProjection, system
  *    approval every time, countdown + notification first).
  *  - "familyguard/audio": SOS / parent-requested short audio, max 30 s.
- *  - "familyguard/enforcement": bedtime / app-blocking watcher service.
+ *  - "familyguard/enforcement": overlay permission for the block screen
+ *    (rules themselves are enforced by the fg_native EnforcementService).
  *
  * Everything here is disclosed to the child in the app's transparency screen;
  * the app runs visibly and never hides what it reads.
@@ -217,14 +218,6 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(messenger, enforcementChannel).setMethodCallHandler { call, result ->
             when (call.method) {
-                "startWatcher" -> {
-                    BlockWatcherService.start(this)
-                    result.success(true)
-                }
-                "stopWatcher" -> {
-                    BlockWatcherService.stop(this)
-                    result.success(true)
-                }
                 "hasOverlayPermission" -> result.success(Settings.canDrawOverlays(this))
                 "openOverlaySettings" -> {
                     startActivity(

@@ -8,8 +8,38 @@
 // the API still runs end-to-end for local development and demos.
 // Older modules still use the store directly; migrating them one at a time
 // is tracked in docs/ROADMAP.md.
+//
+// REMAINING WORK — Postgres split-brain (Phase 5, item 18b; deliberately
+// NOT migrated in this round): only remotecommands + media (+ audit) use
+// normalised tables here. The other ~24 modules read/write `store`
+// directly, and in Postgres mode the JSONB `fg_state` snapshot in
+// config/persistence.js is a second copy of the same data, so
+// store.remoteCommands / store.mediaCaptures stay empty while the tables
+// hold the truth. A full migration would need: move every module to this
+// repository (or a per-module repository with the same isPostgres() dual
+// path), replace the in-process nextId() counter with DB sequences /
+// UUIDs (two server instances currently issue colliding sequential IDs),
+// and either drop the fg_state JSONB snapshot or keep it only for the
+// modules not yet migrated. See docs/API.md § "Remaining work".
+import { unlinkSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pool, query } from '../config/db.js';
 import { store, nextId } from '../config/store.js';
+
+// Capture files on disk (backend/src/uploads/<id>.png|.m4a). Only the
+// file name is ever used — a stored storageRef is basenamed first, so a
+// crafted ref cannot escape the directory.
+const uploadsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'uploads');
+
+function deleteCaptureFile(storageRef) {
+  if (!storageRef) return;
+  try {
+    unlinkSync(join(uploadsDir, basename(storageRef)));
+  } catch {
+    // Already gone (manual cleanup, or the file was never written).
+  }
+}
 
 export const isPostgres = () => pool !== null;
 
@@ -64,7 +94,7 @@ export const COMMAND_TYPES = [
   'request_audio',
 ];
 
-export const COMMAND_TTL_MINUTES = Number(process.env.COMMAND_TTL_MINUTES ?? 15);
+export const COMMAND_TTL_MINUTES = Number(process.env.COMMAND_TTL_MINUTES ?? 60);
 
 function commandFromRow(row) {
   return {
@@ -254,18 +284,24 @@ export async function createMediaCapture({ deviceId, kind, source, commandId }) 
 export async function purgeExpiredMedia() {
   const now = new Date().toISOString();
   if (isPostgres()) {
+    // RETURNING the refs so the disk files can be unlinked too — flipping
+    // the status alone leaked the bytes on disk (audit §6/§9.9).
     const { rows } = await query(
       `UPDATE media_captures SET status = 'expired'
        WHERE status IN ('requested', 'captured', 'delivered')
-         AND expires_at < $1 RETURNING id`,
+         AND expires_at < $1 RETURNING id, storage_ref`,
       [now],
     );
+    for (const r of rows) deleteCaptureFile(r.storage_ref);
     return rows.map((r) => r.id);
   }
   const expired = store.mediaCaptures.filter(
     (m) => ['requested', 'captured', 'delivered'].includes(m.status) && m.expiresAt < now,
   );
-  for (const m of expired) m.status = 'expired';
+  for (const m of expired) {
+    m.status = 'expired';
+    deleteCaptureFile(m.storageRef);
+  }
   return expired.map((m) => m.id);
 }
 

@@ -2,9 +2,12 @@ import { store } from '../../config/store.js';
 import { summarise } from '../usage/usage.service.js';
 import { isWithinBedtime } from '../bedtime/bedtime.service.js';
 import { bonusMinutesToday } from '../screentime/screentime.service.js';
+import { listAudit } from '../../db/repository.js';
 
 // Pulls together one device's data into a single parent-facing report.
-export function buildDeviceReport(deviceId) {
+// Async since v0.9.1: the report now includes the audit log (Phase 5),
+// which reads from Postgres when DATABASE_URL is set.
+export async function buildDeviceReport(deviceId) {
   const usage = summariseSync(deviceId);
   const limit = store.screenTimeLimits.find((l) => l.deviceId === deviceId) || null;
   const location = store.locations.filter((p) => p.deviceId === deviceId).at(-1) || null;
@@ -12,6 +15,9 @@ export function buildDeviceReport(deviceId) {
   const sos = store.sosAlerts.filter((a) => a.deviceId === deviceId && !a.resolved);
   const bedtime = store.bedtimeSchedules.find((b) => b.deviceId === deviceId) || null;
   const blocked = store.blockedApps.find((b) => b.deviceId === deviceId)?.apps ?? [];
+  // The transparency screen promises "every command is listed in the
+  // audit log below" — the log is part of the report now, newest first.
+  const auditLog = await listAudit(deviceId, 100);
 
   return {
     deviceId,
@@ -33,6 +39,7 @@ export function buildDeviceReport(deviceId) {
     pendingTimeRequests: store.timeRequests.filter(
       (r) => r.deviceId === deviceId && r.status === 'pending'
     ),
+    auditLog,
   };
 }
 

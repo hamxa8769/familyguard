@@ -97,6 +97,9 @@ class _Body extends StatelessWidget {
     final loc = LocationPoint.fromServer(report['lastLocation'] as Map?);
     final bedtime = report['bedtime'] as Map?;
     final blocked = List<String>.from(report['blockedApps'] as List? ?? const []);
+    final audit = List<Map<String, dynamic>>.from(
+      (report['auditLog'] as List? ?? const []).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
     final title = Theme.of(context).textTheme.titleMedium;
 
     return ListView(
@@ -149,6 +152,25 @@ class _Body extends StatelessWidget {
               trailing: Text('${u.minutes} min'),
             ),
         ],
+        const SizedBox(height: 16),
+        // The audit log: every remote command and capture, newest first.
+        // The server includes it in the report (and at
+        // GET /api/transparency/:deviceId/audit), so the promise above —
+        // "every command is listed in the audit log below" — is true.
+        Text('Audit log — every command and capture', style: title),
+        if (audit.isEmpty)
+          const ListTile(
+            dense: true,
+            leading: Icon(Icons.history),
+            title: Text('No commands or captures recorded yet.'),
+          ),
+        for (final e in audit.take(20))
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.history),
+            title: Text(e['action']?.toString() ?? ''),
+            subtitle: Text(e['at']?.toString() ?? ''),
+          ),
         const SizedBox(height: 16),
         Text('Information collected', style: title),
         for (final item in collected)

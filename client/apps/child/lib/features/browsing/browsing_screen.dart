@@ -16,7 +16,7 @@ class BrowsingScreen extends StatefulWidget {
 }
 
 class _BrowsingScreenState extends State<BrowsingScreen> {
-  final _api = ApiClient();
+  ApiClient get _api => AuthService.instance.api;
   List<BrowsingSession> _sessions = [];
   String? _status;
   bool _loading = false;

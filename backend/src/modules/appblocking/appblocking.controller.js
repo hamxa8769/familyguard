@@ -1,4 +1,6 @@
 import { store } from '../../config/store.js';
+import { bumpRulesVersion } from '../devices/devices.controller.js';
+import { notifyRuleChange } from '../../services/pushService.js';
 
 // List of app identifiers the device should block.
 export async function setBlocked(req, res, next) {
@@ -13,6 +15,10 @@ export async function setBlocked(req, res, next) {
     } else {
       store.blockedApps.push({ deviceId: req.params.deviceId, apps });
     }
+    // Best-effort push so the child applies the new rules at once instead
+    // of waiting for its next 15-minute poll; never fails the request.
+    await notifyRuleChange(req.params.deviceId);
+    bumpRulesVersion(req.device);
     res.json({ deviceId: req.params.deviceId, apps });
   } catch (err) {
     next(err);

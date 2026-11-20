@@ -3,12 +3,14 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:familyguard_core/familyguard_core.dart';
 
-/// Lists images (and, on Windows, picture files) from the child device.
-///   - Android: MediaStore via native channel (READ_MEDIA_IMAGES).
+/// Lists images and videos (and, on Windows, picture/video files) from the
+/// child device.
+///   - Android: MediaStore via native channel (READ_MEDIA_IMAGES / VIDEO).
 ///   - Windows: the user's Pictures folder via dart:io (no permission needed).
 class GalleryCollector {
   static const _channel = MethodChannel('familyguard/files');
   static const _imageExts = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'};
+  static const _videoExts = {'.mp4', '.mov', '.mkv', '.avi', '.webm'};
 
   Future<bool> hasPermission() async {
     if (Platform.isAndroid) {
@@ -28,20 +30,40 @@ class GalleryCollector {
     } catch (_) {}
   }
 
+  /// Photos + videos, newest first (Android merges the image and video
+  /// MediaStore queries; videos carry isImage=false and a duration).
   Future<List<MediaFile>> images() async {
     if (Platform.isAndroid) {
+      final out = <MediaFile>[];
       try {
         final List<dynamic> data =
             await _channel.invokeMethod('getImages') ?? <dynamic>[];
-        return data
-            .map((e) => MediaFile.fromMap(e as Map<dynamic, dynamic>))
-            .toList();
-      } catch (_) {
-        return [];
-      }
+        out.addAll(data.map((e) => MediaFile.fromMap(e as Map<dynamic, dynamic>)));
+      } catch (_) {}
+      try {
+        final List<dynamic> data =
+            await _channel.invokeMethod('getVideos') ?? <dynamic>[];
+        out.addAll(data.map((e) => MediaFile.fromMap(e as Map<dynamic, dynamic>)));
+      } catch (_) {}
+      out.sort((a, b) => b.dateMillis.compareTo(a.dateMillis));
+      return out;
     }
     if (Platform.isWindows) return _windowsPictures();
     return _sample;
+  }
+
+  /// Videos only (Android). Used by tests / callers that need just videos.
+  Future<List<MediaFile>> videos() async {
+    if (!Platform.isAndroid) return [];
+    try {
+      final List<dynamic> data =
+          await _channel.invokeMethod('getVideos') ?? <dynamic>[];
+      return data
+          .map((e) => MediaFile.fromMap(e as Map<dynamic, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   List<MediaFile> _windowsPictures() {
@@ -56,6 +78,8 @@ class GalleryCollector {
         final name = e.path.split(Platform.pathSeparator).last;
         final lower = name.toLowerCase();
         final isImg = _imageExts.any(lower.endsWith);
+        final isVid = !isImg && _videoExts.any(lower.endsWith);
+        if (!isImg && !isVid) continue;
         final st = e.statSync();
         final parts = e.path.split(Platform.pathSeparator);
         final key = 'w:${_fnv1a(e.path)}';
@@ -70,7 +94,7 @@ class GalleryCollector {
           // Folder the picture is in, e.g. "Screenshots" (root = "Pictures").
           album: parts.length >= 2 ? parts[parts.length - 2] : 'Pictures',
         ));
-        if (out.length >= 200) break;
+        if (out.length >= 1000) break;
       }
     } catch (_) {}
     out.sort((a, b) => b.dateMillis.compareTo(a.dateMillis));
@@ -80,9 +104,10 @@ class GalleryCollector {
   // Windows: key -> full path, filled by images().
   final Map<String, String> _windowsPaths = {};
 
-  /// Small preview (JPEG on Android, PNG on Windows) of the photo with [key],
+  /// Preview (JPEG on Android, PNG on Windows) of the photo with [key],
   /// or null. Only used when the parent has turned photo previews on.
-  Future<Uint8List?> thumbnail(String key, {int size = 256}) async {
+  /// Default is the 1024 px tier (longest side), JPEG q85 on Android.
+  Future<Uint8List?> thumbnail(String key, {int size = 1024}) async {
     if (Platform.isAndroid) {
       try {
         return await _channel
@@ -109,6 +134,28 @@ class GalleryCollector {
       final png = await img.toByteData(format: ui.ImageByteFormat.png);
       img.dispose();
       return png?.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Original file bytes for one photo/video — only called when the parent
+  /// requested this exact file (see needOriginals in the sync). Capped at
+  /// 8 MB on the native side, matching the server limit.
+  Future<Uint8List?> originalBytes(String key) async {
+    if (Platform.isAndroid) {
+      try {
+        return await _channel
+            .invokeMethod<Uint8List>('getOriginal', {'key': key});
+      } catch (_) {
+        return null;
+      }
+    }
+    final path = _windowsPaths[key];
+    if (path == null) return null;
+    try {
+      final bytes = await File(path).readAsBytes();
+      return bytes.length > 8 * 1024 * 1024 ? null : bytes;
     } catch (_) {
       return null;
     }

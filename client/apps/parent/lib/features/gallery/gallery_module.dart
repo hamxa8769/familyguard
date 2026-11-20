@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
+import '../../common/share_file.dart';
 import '../../common/widgets.dart';
 import '../../feature_module.dart';
 import '../../state/parent_state.dart';
@@ -23,11 +24,17 @@ class GalleryModule implements FeatureModule {
 }
 
 class _GalleryData {
-  _GalleryData(this.previews, this.items);
+  _GalleryData(this.previews, this.items, this.total);
   final bool previews;
   final List<MediaFile> items;
 
-  List<MediaFile> get photos => items.where((i) => i.isImage).toList();
+  /// Total items on the server (before paging).
+  final int total;
+
+  /// Photos and videos together, newest first.
+  List<MediaFile> get photos => items;
+
+  List<MediaFile> get videos => items.where((i) => !i.isImage).toList();
 
   /// Albums (folders) newest first, each with its photos newest first.
   List<(String, List<MediaFile>)> get albums {
@@ -44,13 +51,30 @@ class _GalleryData {
 class GalleryViewScreen extends StatelessWidget {
   const GalleryViewScreen({super.key});
 
-  static Future<_GalleryData> _load(String deviceId) async {
-    final res = await ParentState.instance.api.get('/api/files/$deviceId');
+  static Future<_GalleryData> _load(
+    String deviceId, {
+    int limit = 200,
+    int offset = 0,
+    String? album,
+  }) async {
+    final query = <String, String>{
+      'limit': '$limit',
+      'offset': '$offset',
+      if (album != null) 'album': album,
+    };
+    final qs = query.entries
+        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+    final res = await ParentState.instance.api.get('/api/files/$deviceId?$qs');
     final items = (res['items'] as List)
         .map((e) => MediaFile.fromMap(e as Map))
         .toList()
       ..sort((a, b) => b.dateMillis.compareTo(a.dateMillis));
-    return _GalleryData(res['previews'] == true, items);
+    return _GalleryData(
+      res['previews'] == true,
+      items,
+      (res['total'] as num?)?.toInt() ?? items.length,
+    );
   }
 
   @override
@@ -125,6 +149,7 @@ class _Albums extends StatelessWidget {
                   deviceId: deviceId,
                   name: 'All photos',
                   photos: data.photos,
+                  total: data.total,
                 ),
                 for (final (name, photos) in albums)
                   _AlbumTile(deviceId: deviceId, name: name, photos: photos),
@@ -214,7 +239,7 @@ class _PreviewsCardState extends State<_PreviewsCard> {
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     Text(
                       widget.on
-                          ? '${widget.ready} of ${widget.total < 100 ? widget.total : 100} previews ready'
+                          ? '${widget.ready} of ${widget.total < 500 ? widget.total : 500} previews ready'
                           : 'Off — only names, dates and albums are shared',
                       style: TextStyle(color: c.textMuted, fontSize: 13),
                     ),
@@ -229,9 +254,9 @@ class _PreviewsCardState extends State<_PreviewsCard> {
           ),
           const SizedBox(height: FgSpace.sm),
           Text(
-            'Small previews of the newest 100 photos. Your child is told this '
-            'in the app and can see it in "What my parent sees". Turning it '
-            'off deletes all previews.',
+            'Previews (1024 px) of the newest 500 photos and videos. Your '
+            'child is told this in the app and can see it in "What my '
+            'parent sees". Turning it off deletes all previews.',
             style: TextStyle(color: c.textMuted, fontSize: 12),
           ),
         ],
@@ -241,11 +266,16 @@ class _PreviewsCardState extends State<_PreviewsCard> {
 }
 
 class _AlbumTile extends StatelessWidget {
-  const _AlbumTile(
-      {required this.deviceId, required this.name, required this.photos});
+  const _AlbumTile({
+    required this.deviceId,
+    required this.name,
+    required this.photos,
+    this.total,
+  });
   final String deviceId;
   final String name;
   final List<MediaFile> photos;
+  final int? total;
 
   @override
   Widget build(BuildContext context) {
@@ -254,8 +284,12 @@ class _AlbumTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(FgSpace.radius),
       onTap: () => Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) =>
-            _AlbumScreen(deviceId: deviceId, name: name, photos: photos),
+        builder: (_) => _AlbumScreen(
+          deviceId: deviceId,
+          name: name,
+          photos: photos,
+          total: total,
+        ),
       )),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,40 +323,135 @@ class _AlbumTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text('${photos.length} photo${photos.length == 1 ? '' : 's'}',
-              style: TextStyle(color: c.textMuted, fontSize: 12)),
+          Text(
+            _countLabel(photos),
+            style: TextStyle(color: c.textMuted, fontSize: 12),
+          ),
         ],
       ),
     );
   }
 }
 
-class _AlbumScreen extends StatelessWidget {
-  const _AlbumScreen(
-      {required this.deviceId, required this.name, required this.photos});
+String _countLabel(List<MediaFile> photos) {
+  final videos = photos.where((p) => !p.isImage).length;
+  final images = photos.length - videos;
+  final parts = <String>[
+    if (images > 0) '$images photo${images == 1 ? '' : 's'}',
+    if (videos > 0) '$videos video${videos == 1 ? '' : 's'}',
+  ];
+  return parts.isEmpty ? 'Empty' : parts.join(' • ');
+}
+
+class _AlbumScreen extends StatefulWidget {
+  const _AlbumScreen({
+    required this.deviceId,
+    required this.name,
+    required this.photos,
+    this.total,
+  });
   final String deviceId;
   final String name;
   final List<MediaFile> photos;
 
+  /// Total items on the server for this album (null = unknown, e.g. a named
+  /// album seen only inside the 200-item overview page).
+  final int? total;
+
+  @override
+  State<_AlbumScreen> createState() => _AlbumScreenState();
+}
+
+class _AlbumScreenState extends State<_AlbumScreen> {
+  static const _pageSize = 100;
+  late List<MediaFile> _photos = List.of(widget.photos);
+  bool _loadingMore = false;
+  late bool _hasMore = widget.total == null
+      ? true // unknown total: try once; an empty page stops paging
+      : widget.photos.length < widget.total!;
+
+  final _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      if (_scroll.position.pixels >=
+          _scroll.position.maxScrollExtent - 400) {
+        _loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  bool get _isAll => widget.name == 'All photos';
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final page = await GalleryViewScreen._load(
+        widget.deviceId,
+        limit: _pageSize,
+        offset: _photos.length,
+        album: _isAll ? null : widget.name,
+      );
+      if (!mounted) return;
+      setState(() {
+        _photos = [..._photos, ...page.items];
+        _hasMore = widget.total == null
+            ? page.items.length == _pageSize
+            : _photos.length < widget.total!;
+        _loadingMore = false;
+      });
+    } on ApiException {
+      if (mounted) setState(() => _hasMore = false);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final itemCount = _photos.length + (_hasMore ? 1 : 0);
     return Scaffold(
-      appBar: AppBar(title: Text(name)),
+      appBar: AppBar(title: Text(widget.name)),
       body: GridView.builder(
+        controller: _scroll,
         padding: const EdgeInsets.all(2),
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 130,
           mainAxisSpacing: 2,
           crossAxisSpacing: 2,
         ),
-        itemCount: photos.length,
-        itemBuilder: (context, i) => GestureDetector(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) =>
-                _PhotoViewer(deviceId: deviceId, photos: photos, index: i),
-          )),
-          child: ThumbImage(deviceId: deviceId, file: photos[i]),
-        ),
+        itemCount: itemCount,
+        itemBuilder: (context, i) {
+          if (i >= _photos.length) {
+            return Center(
+              child: _loadingMore
+                  ? const CircularProgressIndicator()
+                  : TextButton(
+                      onPressed: _loadMore,
+                      child: const Text('Load more'),
+                    ),
+            );
+          }
+          return GestureDetector(
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => _PhotoViewer(
+                deviceId: widget.deviceId,
+                photos: _photos,
+                index: i,
+              ),
+            )),
+            child: ThumbImage(deviceId: widget.deviceId, file: _photos[i]),
+          );
+        },
       ),
     );
   }
@@ -343,6 +472,8 @@ class _PhotoViewer extends StatefulWidget {
 class _PhotoViewerState extends State<_PhotoViewer> {
   late final _page = PageController(initialPage: widget.index);
   late int _i = widget.index;
+  bool _busy = false;
+  final _requested = <String>{};
 
   @override
   void dispose() {
@@ -350,15 +481,79 @@ class _PhotoViewerState extends State<_PhotoViewer> {
     super.dispose();
   }
 
+  /// Download the full-resolution original when the child already uploaded
+  /// it; otherwise ask the child to upload it on the next sync.
+  Future<void> _downloadOrRequest(MediaFile f) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (f.hasOriginal || _requested.contains(f.key)) {
+        final bytes = await ParentState.instance.api.getBytes(
+          '/api/files/${widget.deviceId}/original/${Uri.encodeComponent(f.key)}',
+        );
+        if (!mounted) return;
+        await saveAndShareBytes(
+          context,
+          bytes,
+          f.name,
+          mimeType: f.isImage
+              ? (f.name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg')
+              : 'video/mp4',
+        );
+      } else {
+        await ParentState.instance.api.post(
+          '/api/files/${widget.deviceId}/original/${Uri.encodeComponent(f.key)}/request',
+          {},
+        );
+        if (!mounted) return;
+        _requested.add(f.key);
+        messenger.showSnackBar(const SnackBar(
+          content: Text(
+            'Requested — the full file arrives after the child\'s next sync. '
+            'Tap download again then.',
+          ),
+        ));
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Could not download: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final f = widget.photos[_i];
+    final isVideo = !f.isImage;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(f.name, overflow: TextOverflow.ellipsis),
+        actions: [
+          IconButton(
+            icon: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.download),
+            tooltip: f.hasOriginal
+                ? 'Download full ${isVideo ? 'video' : 'photo'}'
+                : 'Request full ${isVideo ? 'video' : 'photo'} from device',
+            onPressed: _busy ? null : () => _downloadOrRequest(f),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -381,8 +576,13 @@ class _PhotoViewerState extends State<_PhotoViewer> {
           Padding(
             padding: const EdgeInsets.all(FgSpace.lg),
             child: Text(
-              '${f.albumLabel} · ${f.sizeLabel} · ${timeAgo(f.date)}\n'
-              'Preview only — the original photo stays on the device.',
+              '${f.albumLabel} · ${f.sizeLabel}'
+              '${isVideo ? ' · ${f.durationLabel}' : ''} · ${timeAgo(f.date)}\n'
+              '${isVideo
+                  ? 'Video poster — playback is not available in this version.'
+                  : f.hasOriginal
+                      ? 'Full photo available — tap the download icon to save it.'
+                      : 'Preview (1024 px) — tap download to request the original from the device.'}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
@@ -456,9 +656,40 @@ class _ThumbImageState extends State<ThumbImage> {
   Widget build(BuildContext context) {
     final c = FgColors.of(context);
     if (_bytes != null) {
-      return Image.memory(_bytes!,
+      final image = Image.memory(_bytes!,
           fit: widget.fit, gaplessPlayback: true, width: double.infinity,
           height: double.infinity);
+      // Videos show their poster with a play badge + duration (poster-only:
+      // no video player in this version).
+      if (!widget.file.isImage) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            image,
+            const Center(
+              child: Icon(Icons.play_circle_fill,
+                  color: Colors.white, size: 36),
+            ),
+            Positioned(
+              right: 6,
+              bottom: 6,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  widget.file.durationLabel,
+                  style: const TextStyle(color: Colors.white, fontSize: 11),
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+      return image;
     }
     if (widget.file.hasThumb && !_failed) {
       return const Skeleton(height: double.infinity, radius: 0);
@@ -469,7 +700,8 @@ class _ThumbImageState extends State<ThumbImage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.image_outlined, color: c.textMuted),
+          Icon(widget.file.isImage ? Icons.image_outlined : Icons.play_circle_outline,
+              color: c.textMuted),
           const SizedBox(height: 4),
           Text(widget.file.name,
               maxLines: 2,

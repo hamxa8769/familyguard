@@ -1,5 +1,6 @@
 import { store } from '../../config/store.js';
 import { accessibleDeviceIds } from '../../middleware/access.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
 
 // Everything a parent should be notified about since a point in time:
 // SOS alerts, "more time" requests and safe-zone arrive/leave events.
@@ -34,7 +35,9 @@ export async function getFeed(req, res, next) {
           body: 'Safe zone' })),
     ].sort((a, b) => new Date(a.at) - new Date(b.at));
 
-    res.json({ now: new Date().toISOString(), items: items.slice(-50) });
+    // Was capped at the newest 50; now paginated (default limit 500).
+    const { items: page, total, limit, offset } = pageOf(items, parseLimitOffset(req));
+    res.json({ now: new Date().toISOString(), items: page, total, limit, offset });
   } catch (err) {
     next(err);
   }

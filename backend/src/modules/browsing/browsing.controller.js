@@ -1,4 +1,5 @@
 import { store, nextId } from '../../config/store.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
 
 // Browsing history — browser-app sessions only (which browser was used,
 // when, for how long). Full URL history is NOT accessible on Android
@@ -47,7 +48,8 @@ export async function listSessions(req, res, next) {
       .filter((s) => s.deviceId === deviceId)
       .slice()
       .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
-    res.json({ deviceId, sessions });
+    const { items, total, limit, offset } = pageOf(sessions, parseLimitOffset(req));
+    res.json({ deviceId, sessions: items, total, limit, offset });
   } catch (err) {
     next(err);
   }

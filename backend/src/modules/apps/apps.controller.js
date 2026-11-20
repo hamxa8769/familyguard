@@ -1,4 +1,5 @@
 import { store } from '../../config/store.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
 
 // Installed-apps inventory: the child device reports which apps are
 // installed; the parent reads the list. Upserted by packageName so a
@@ -50,7 +51,8 @@ export async function listApps(req, res, next) {
   try {
     const { deviceId } = req.params;
     const apps = store.installedApps.filter((a) => a.deviceId === deviceId);
-    res.json({ deviceId, apps });
+    const { items, total, limit, offset } = pageOf(apps, parseLimitOffset(req));
+    res.json({ deviceId, apps: items, total, limit, offset });
   } catch (err) {
     next(err);
   }

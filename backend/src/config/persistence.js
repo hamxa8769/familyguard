@@ -10,7 +10,9 @@
 // one server instance and family-scale data; a normalised schema is the next
 // step if it ever needs to scale out.
 import fs from 'node:fs/promises';
+import { existsSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { store, getCounter, setCounter } from './store.js';
 
@@ -114,11 +116,100 @@ function keepLastPerDevice(list, n) {
   return out.reverse();
 }
 
+// Same idea keyed by any id field (childId, ...): keep the newest n rows
+// per key. Rows are appended chronologically, so "last n in array order"
+// is the newest n.
+function keepLastPerKey(list, n, keyOf) {
+  const counts = new Map();
+  const out = [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const key = keyOf(list[i]);
+    const c = counts.get(key) || 0;
+    if (c < n) out.push(list[i]);
+    counts.set(key, c + 1);
+  }
+  return out.reverse();
+}
+
+// Comms are stored as one row per device holding an `items` array
+// (replace-all sync). Cap the array so a very chatty device cannot grow
+// the single JSON file without bound. SMS / calls keep the newest 1000
+// rows by date; contacts (no date) keep the first 2000 as stored.
+function capCommsItems(collection, cap, byDate) {
+  for (const row of collection) {
+    if (!Array.isArray(row.items) || row.items.length <= cap) continue;
+    row.items = byDate
+      ? [...row.items].sort((a, b) => (b.date || 0) - (a.date || 0)).slice(0, cap)
+      : row.items.slice(0, cap);
+  }
+}
+
 export function prune(now = Date.now()) {
   store.usageEvents = store.usageEvents.filter((e) => now - new Date(e.startedAt) < 35 * DAY);
   store.locations = keepLastPerDevice(store.locations, 500);
   store.geofenceEvents = keepLastPerDevice(store.geofenceEvents, 300);
-  store.thumbnails = keepLastPerDevice(store.thumbnails, 100);
+  // Phase 5: the collections that were never pruned (audit §6).
+  // Browsing sessions are append-only — keep the newest 500 per device.
+  store.browsingSessions = keepLastPerDevice(store.browsingSessions ?? [], 500);
+  // Comms: whole-array replace per sync, no size cap until now.
+  capCommsItems(store.contacts ?? [], 2000, false);
+  capCommsItems(store.smsMessages ?? [], 1000, true);
+  capCommsItems(store.callLogs ?? [], 1000, true);
+  // Installed apps: drop rows the device has not reported in 90 days
+  // (uninstalled / stale). Rows without lastSeenAt are kept.
+  store.installedApps = (store.installedApps ?? []).filter(
+    (a) => !a.lastSeenAt || now - new Date(a.lastSeenAt) < 90 * DAY,
+  );
+  // Agreements: keep the newest 50 per child (old proposals stay visible
+  // in the audit log, which is not pruned here).
+  store.agreements = keepLastPerKey(store.agreements ?? [], 50, (a) => a.childId);
+  // Reward events: keep the newest 1000 per child. Totals are derived
+  // from the kept events, so very old history ages out of the total —
+  // at family scale (a few awards a week) this is decades away.
+  store.rewardEvents = keepLastPerKey(store.rewardEvents ?? [], 1000, (e) => e.childId);
+  // Keyword lists: one live list per child — drop stale duplicates and
+  // keep the most recently updated row per child.
+  {
+    const latest = new Map();
+    for (const row of store.keywordLists ?? []) {
+      const prev = latest.get(row.childId);
+      if (!prev || new Date(row.updatedAt ?? 0) >= new Date(prev.updatedAt ?? 0)) {
+        latest.set(row.childId, row);
+      }
+    }
+    store.keywordLists = [...latest.values()];
+  }
+  // Thumbnails + originals are capped per device at MAX_PREVIEWS (500).
+  // Pruned entries also lose their file on disk (best effort, sync).
+  const thumbsDir = path.join(
+    path.dirname(fileURLToPath(new URL('.', import.meta.url))),
+    '..',
+    'uploads',
+    'thumbs'
+  );
+  const originalsDir = path.join(
+    path.dirname(fileURLToPath(new URL('.', import.meta.url))),
+    '..',
+    'uploads',
+    'originals'
+  );
+  const pruneFiles = (before, after, dir) => {
+    const kept = new Set(after.map((e) => `${e.deviceId}/${e.key}`));
+    for (const e of before) {
+      if (kept.has(`${e.deviceId}/${e.key}`) || !e.file) continue;
+      try {
+        unlinkSync(path.join(dir, e.deviceId, path.basename(e.file)));
+      } catch {
+        // Already gone — not an error.
+      }
+    }
+  };
+  const thumbsBefore = store.thumbnails;
+  store.thumbnails = keepLastPerDevice(store.thumbnails, 500);
+  pruneFiles(thumbsBefore, store.thumbnails, thumbsDir);
+  const originalsBefore = store.originals ?? [];
+  store.originals = keepLastPerDevice(store.originals ?? [], 500);
+  pruneFiles(originalsBefore, store.originals, originalsDir);
   store.sosAlerts = store.sosAlerts.filter((a) => !a.resolved || now - new Date(a.at) < 90 * DAY);
   store.timeRequests = store.timeRequests.filter((r) => now - new Date(r.at) < 30 * DAY);
   store.bonusTime = store.bonusTime.filter((b) => now - new Date(b.day) < 3 * DAY);

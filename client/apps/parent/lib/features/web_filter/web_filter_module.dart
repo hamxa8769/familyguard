@@ -140,7 +140,9 @@ class _DomainListState extends State<_DomainList> {
           child: Text(
             'Subdomains are included (blocking example.com also blocks '
             'm.example.com). Works for apps and browsers using normal DNS; '
-            'browsers with their own "secure DNS" turned on can bypass it.',
+            'browsers with their own "secure DNS" turned on can bypass it. '
+            'Android "Private DNS" set to a hostname bypasses it too — you '
+            'are alerted when the child reports that setting.',
             style: TextStyle(fontSize: 12),
           ),
         ),

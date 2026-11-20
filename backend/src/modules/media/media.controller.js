@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { join, extname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   MAX_SOS_AUDIO_SECONDS,
@@ -12,6 +12,7 @@ import {
   updateMediaCapture,
 } from '../../db/repository.js';
 import { store } from '../../config/store.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
 
 // Where capture files live on disk (Phase 2). This is local-disk storage
 // for the sideload/demo deployment — a production deployment should swap
@@ -104,7 +105,8 @@ export async function listCaptures(req, res, next) {
       return res.status(400).json({ error: 'deviceId query parameter is required' });
     }
     const captures = await listMediaCaptures(deviceId);
-    res.json({ captures });
+    const { items, total, limit, offset } = pageOf(captures, parseLimitOffset(req));
+    res.json({ captures: items, total, limit, offset });
   } catch (err) {
     next(err);
   }
@@ -130,6 +132,19 @@ export async function completeCapture(req, res, next) {
       return res.status(400).json({
         error: `Audio is capped at ${MAX_SOS_AUDIO_SECONDS} seconds`,
       });
+    }
+    // storageRef is a bare file name under uploads/ — never a path. A
+    // caller-supplied '../../etc/passwd' must not escape that directory.
+    if (storageRef != null) {
+      if (
+        typeof storageRef !== 'string' ||
+        storageRef === '' ||
+        storageRef.includes('/') ||
+        storageRef.includes('\\') ||
+        storageRef.includes('..')
+      ) {
+        return res.status(400).json({ error: 'storageRef must be a plain file name' });
+      }
     }
     const capture = await getMediaCapture(req.params.id);
     if (!capture) return res.status(404).json({ error: 'Capture not found' });
@@ -212,11 +227,14 @@ export async function getFile(req, res, next) {
     if (capture.status === 'deleted' || capture.status === 'expired' || !capture.storageRef) {
       return res.status(404).json({ error: 'File not available' });
     }
-    const file = join(uploadsDir, capture.storageRef);
+    // Defence in depth: only the file name is ever used, even if a stored
+    // storageRef predates the validation in completeCapture.
+    const fileName = basename(capture.storageRef);
+    const file = join(uploadsDir, fileName);
     if (!existsSync(file)) return res.status(404).json({ error: 'File not found on disk' });
     const mime = extname(file) === '.png' ? 'image/png' : 'audio/mp4';
     res.setHeader('Content-Type', mime);
-    res.setHeader('Content-Disposition', `attachment; filename="${capture.storageRef}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     createReadStream(file).pipe(res);
   } catch (err) {
     next(err);
@@ -230,7 +248,7 @@ export async function deleteCapture(req, res, next) {
     const updated = await updateMediaCapture(req.params.id, { status: 'deleted' });
     if (capture.storageRef) {
       try {
-        unlinkSync(join(uploadsDir, capture.storageRef));
+        unlinkSync(join(uploadsDir, basename(capture.storageRef)));
       } catch {
         // File already gone (e.g. manual cleanup); the record is deleted anyway.
       }

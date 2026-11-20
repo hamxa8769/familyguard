@@ -1,4 +1,5 @@
 import * as usageService from './usage.service.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
 
 export async function reportUsage(req, res, next) {
   try {
@@ -25,7 +26,14 @@ export async function getDaily(req, res, next) {
 export async function getUsage(req, res, next) {
   try {
     const summary = await usageService.summarise(req.params.deviceId);
-    res.json(summary);
+    // The summary is an aggregate per app; paginate the per-app rows so a
+    // device with very many apps stays bounded. Default limit 500 returns
+    // the whole list at family scale (see middleware/pagination.js).
+    const { items, total, limit, offset } = pageOf(
+      summary.apps,
+      parseLimitOffset(req),
+    );
+    res.json({ ...summary, apps: items, total, limit, offset });
   } catch (err) {
     next(err);
   }

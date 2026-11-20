@@ -15,6 +15,80 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - ML/sentiment alerts (design only — no model bundled)
 - Device-owner setup for kiosk-grade enforcement (out of scope for sideload)
 
+## [0.9.1] - 2026-11-20
+
+Field-test fixes for the v0.9.0 complaints, plus professional hardening.
+Child/parent 0.9.1+11, backend 0.9.1. Transparent, consent-based only —
+no stealth mode, no continuous mic listening, no secret screenshots.
+
+### Fixed
+- **Device ID no longer typed by hand:** the 4 parent screens (Media,
+  Remote Commands, Installed Apps, Browsing) now use the selected child
+  device automatically (`DeviceScoped`); every fresh unauthenticated
+  `ApiClient()` is replaced by the shared authenticated client (parent +
+  child), so screens stop returning 401.
+- **Gallery:** thumbnails 256 px / q70 → 1024 px / q85, stored on disk
+  instead of base64 in the JSON blob; caps raised (1000 rows, 500
+  previews, 100 thumbs per sync); pagination; videos (MediaStore.Video
+  posters + duration).
+- **Downloads:** screenshot/audio download button (wires the existing
+  `GET /api/media/:id/file`); gallery full-res download on parent
+  request; messages/contacts/call-log CSV/JSON export with download.
+- **Messages:** conversation view (grouped threads, bubbles), search and
+  pagination; per-permission comms sync (granting only SMS still syncs
+  SMS); SMS `threadId` collected.
+- **Enforcement speed:** FCM push wired on the child (token registration
+  + background handler → sync); rule-setting endpoints and SOS now send
+  push; rules-version fast path (60 s check, full fetch only on change);
+  remote commands poll in `SyncService` (work with the app closed);
+  command TTL 15 → 60 min; usage recompute 30 s → 10 s; bedtime minute
+  granularity (22:30); VPN auto-restart + Private-DNS warning; parent
+  alerts when enforcement is inactive.
+- **Enforcement unification:** duplicate `BlockWatcherService` (System B)
+  deleted — one enforcement system, one notification.
+- **Notifications:** the duplicate watcher notification is gone; the one
+  remaining "FamilyGuard is active" notification is silent (no sound,
+  no badge, low importance). It cannot be removed while rules are on —
+  Android requires a foreground-service notification.
+- **Permissions:** "Allow all" auto-advance on the onboarding screen;
+  audio (SOS) and device-admin items added to the same screen; a
+  twice-denied permission now offers "Open Settings" instead of a dead
+  Allow button; battery-optimisation exemption item added. The once-only
+  onboarding gate is unchanged; nothing is silently auto-granted.
+- **Security (IDOR):** `requireDeviceAccess` on media + remote-commands
+  routes; shared `requireChildAccess` for agreement/rewards/keywords/
+  apps/browsing; apps/browsing sync now accepts device tokens (was 403);
+  push-token set fixed for paired devices; login without password now
+  returns 400 (was 500); `storageRef` sanitised; JSON body limit
+  5 MB → 12 MB so 8 MB uploads work.
+- **API hardening:** pagination on all unbounded lists; pruning of
+  unbounded collections; expired media files deleted from disk on purge;
+  JSON 404 handler; request logging; helmet; restricted CORS; trust
+  proxy; global rate limiter; `{error, code}` error envelope; dual mount
+  under `/api` and `/api/v1`; `GET /health/ready`; `GET /api/me`;
+  password change; token refresh/revoke (`POST /api/auth/logout`);
+  audit log readable (`GET /api/transparency/:deviceId/audit`) and
+  included in the transparency report.
+- **Parent UI:** all 19 feature modules now show loading, empty and
+  error-with-retry states plus pull-to-refresh.
+
+### Needs the user (not in this release)
+- **Firebase/FCM:** create a Firebase project, add
+  `google-services.json` to `client/apps/child/android/app/`, apply the
+  `com.google.gms.google-services` plugin, and set `FCM_SERVER_KEY` in
+  the backend `.env`. Until then push is a graceful no-op and
+  enforcement still works via polling. SOS push to the parent phone also
+  needs parent-app FCM wiring (parent still learns of SOS via feed
+  polling).
+- **Still needs a device test:** background `lock_now` with the app
+  closed, FCM end-to-end delivery, reboot enforcement, bedtime 22:30
+  boundary, VPN-off restart.
+- **Deferred:** video playback (poster-only for now); two-tier thumbs
+  (single 1024 px tier); comms delta sync (MAX_ROWS 1000 +
+  per-permission sync done; server-side append is next); Postgres
+  split-brain migration (documented in `docs/API.md`); full
+  success-envelope standardisation (would break current clients).
+
 ## [0.9.0] - 2026-11-20
 
 This release merges the two lines that grew from v0.7.0: the 0.7.1 line

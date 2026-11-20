@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
@@ -7,8 +8,16 @@ import 'consent/consent_screen.dart';
 import 'home/child_home.dart';
 import 'pairing/pair_screen.dart';
 import 'permissions/permissions_screen.dart';
+import 'services/fcm_service.dart';
 
-void main() => runApp(const ChildApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Push (FCM) is best-effort and inert without a Firebase project: if no
+  // google-services.json is configured, FcmService.init() just leaves push
+  // off and the app keeps working via polling.
+  await FcmService.instance.init();
+  runApp(const ChildApp());
+}
 
 class ChildApp extends StatelessWidget {
   const ChildApp({super.key});
@@ -50,6 +59,9 @@ class _StartupGateState extends State<StartupGate> {
 
   Future<void> _init() async {
     await _auth.load();
+    // Already paired: (re-)register the FCM token, if push is configured.
+    // No-op when Firebase is not set up yet.
+    unawaited(FcmService.instance.registerPushToken());
     final consented = await ConsentService().hasConsented();
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -75,7 +87,12 @@ class _StartupGateState extends State<StartupGate> {
           body: Center(child: CircularProgressIndicator()));
     } else if (_auth.deviceId == null) {
       page = PairScreen(
-          key: const ValueKey('pair'), onPaired: () => setState(() {}));
+          key: const ValueKey('pair'),
+          onPaired: () {
+            // Just paired: register the FCM token for this device now.
+            unawaited(FcmService.instance.registerPushToken());
+            setState(() {});
+          });
     } else if (!_consented) {
       page = ConsentScreen(
         key: const ValueKey('consent'),

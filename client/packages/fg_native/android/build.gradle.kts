@@ -54,4 +54,7 @@ kotlin {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
+    // One-time expedited retry work when a background foreground-service
+    // start is refused (EnforcementRetryWorker).
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

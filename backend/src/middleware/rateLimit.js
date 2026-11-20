@@ -9,7 +9,10 @@ export function rateLimit({ windowMs = 10 * 60 * 1000, max = 20 } = {}) {
     if (recent.length >= max) {
       const retry = Math.ceil((windowMs - (now - recent[0])) / 1000);
       res.set('Retry-After', String(retry));
-      return res.status(429).json({ error: `Too many attempts. Try again in ${Math.ceil(retry / 60)} min.` });
+      return res.status(429).json({
+        error: `Too many attempts. Try again in ${Math.ceil(retry / 60)} min.`,
+        code: 'rate_limited',
+      });
     }
     recent.push(now);
     hits.set(ip, recent);

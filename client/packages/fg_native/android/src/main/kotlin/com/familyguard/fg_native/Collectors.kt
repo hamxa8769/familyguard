@@ -25,7 +25,7 @@ import java.util.Calendar
  * "What my parent sees" screens.
  */
 object Collectors {
-    private const val MAX_ROWS = 200
+    private const val MAX_ROWS = 1000
 
     private fun granted(ctx: Context, perm: String) =
         ContextCompat.checkSelfPermission(ctx, perm) == PackageManager.PERMISSION_GRANTED
@@ -78,6 +78,20 @@ object Collectors {
             granted(ctx, Manifest.permission.READ_SMS) &&
             granted(ctx, Manifest.permission.READ_CALL_LOG)
 
+    // Per-type checks: each of contacts / SMS / calls syncs on its own
+    // permission (an all-or-nothing gate lost all three when one was denied).
+    fun hasContactsPermission(ctx: Context) =
+        granted(ctx, Manifest.permission.READ_CONTACTS)
+
+    fun hasSmsPermission(ctx: Context) =
+        granted(ctx, Manifest.permission.READ_SMS)
+
+    fun hasCallLogPermission(ctx: Context) =
+        granted(ctx, Manifest.permission.READ_CALL_LOG)
+
+    fun hasAnyCommsPermission(ctx: Context) =
+        hasContactsPermission(ctx) || hasSmsPermission(ctx) || hasCallLogPermission(ctx)
+
     fun contacts(ctx: Context): List<Map<String, Any>> {
         if (!granted(ctx, Manifest.permission.READ_CONTACTS)) return emptyList()
         val out = ArrayList<Map<String, Any>>()
@@ -109,7 +123,7 @@ object Collectors {
         val out = ArrayList<Map<String, Any>>()
         ctx.contentResolver.query(
             Telephony.Sms.CONTENT_URI,
-            arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE),
+            arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE, Telephony.Sms.THREAD_ID),
             null, null,
             "${Telephony.Sms.DATE} DESC"
         )?.use { c ->
@@ -117,13 +131,15 @@ object Collectors {
             val bodyIdx = c.getColumnIndex(Telephony.Sms.BODY)
             val dateIdx = c.getColumnIndex(Telephony.Sms.DATE)
             val typeIdx = c.getColumnIndex(Telephony.Sms.TYPE)
+            val threadIdx = c.getColumnIndex(Telephony.Sms.THREAD_ID)
             while (c.moveToNext() && out.size < MAX_ROWS) {
                 out.add(
                     mapOf(
                         "address" to (c.getString(addrIdx) ?: ""),
                         "body" to (c.getString(bodyIdx) ?: ""),
                         "date" to c.getLong(dateIdx),
-                        "type" to c.getInt(typeIdx)
+                        "type" to c.getInt(typeIdx),
+                        "threadId" to (if (threadIdx >= 0) c.getLong(threadIdx) else -1L)
                     )
                 )
             }
@@ -188,7 +204,22 @@ object Collectors {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES
         else Manifest.permission.READ_EXTERNAL_STORAGE
 
+    /** All media permissions the gallery needs (images + video on Android 13+). */
+    fun galleryPermissions(): List<String> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            listOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
+        } else {
+            listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+
     fun hasGalleryPermission(ctx: Context) = granted(ctx, galleryPermission())
+
+    fun hasVideoPermission(ctx: Context) =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            granted(ctx, Manifest.permission.READ_MEDIA_VIDEO)
+        } else {
+            granted(ctx, Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
 
     /** Recent photos with album (folder) name and a stable key ("m:<media id>"). */
     fun images(ctx: Context): List<Map<String, Any>> {
@@ -236,17 +267,20 @@ object Collectors {
     }
 
     /**
-     * Small JPEG preview (longest side ~[size] px) of the photo with [key]
-     * ("m:<media id>"), or null. Uses the system thumbnail cache, so the
-     * full photo is never read or uploaded.
+     * Small JPEG preview (longest side ~[size] px, quality 85) of the photo
+     * ("m:<media id>") or video poster ("v:<media id>") with [key], or null.
+     * Uses the system thumbnail cache, so the full file is never read.
+     * The 1024 px tier is what the parent grid and viewer both show.
      */
-    fun thumbnail(ctx: Context, key: String, size: Int = 256): ByteArray? {
-        if (!hasGalleryPermission(ctx) || !key.startsWith("m:")) return null
-        val id = key.removePrefix("m:").toLongOrNull() ?: return null
+    fun thumbnail(ctx: Context, key: String, size: Int = 1024): ByteArray? {
+        val isVideo = key.startsWith("v:")
+        if ((!isVideo && !key.startsWith("m:")) || (!isVideo && !hasGalleryPermission(ctx)) || (isVideo && !hasVideoPermission(ctx))) return null
+        val id = key.removePrefix("m:").removePrefix("v:").toLongOrNull() ?: return null
         val bitmap = try {
             if (Build.VERSION.SDK_INT >= 29) {
                 val uri = android.content.ContentUris.withAppendedId(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id
+                    if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                    else MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id
                 )
                 ctx.contentResolver.loadThumbnail(uri, android.util.Size(size, size), null)
             } else {
@@ -261,10 +295,90 @@ object Collectors {
         return try {
             val scaled = scaleDown(bitmap, size)
             val out = java.io.ByteArrayOutputStream()
-            scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, out)
+            scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, out)
             if (scaled !== bitmap) scaled.recycle()
             bitmap.recycle()
             out.toByteArray()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Recent videos, mirroring [images]: key "v:<media id>", poster via [thumbnail]. */
+    fun videos(ctx: Context): List<Map<String, Any>> {
+        if (!hasVideoPermission(ctx)) return emptyList()
+        val out = ArrayList<Map<String, Any>>()
+        // No "LIMIT" in sortOrder: MediaStore rejects it on Android 11+.
+        ctx.contentResolver.query(
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+            arrayOf(
+                MediaStore.Video.Media._ID,
+                MediaStore.Video.Media.DISPLAY_NAME,
+                MediaStore.Video.Media.SIZE,
+                MediaStore.Video.Media.DATE_MODIFIED,
+                MediaStore.Video.Media.BUCKET_DISPLAY_NAME,
+                MediaStore.Video.Media.DURATION,
+                // Local path: only for the original-file upload on the
+                // child's own device; the sync strips it before upload.
+                @Suppress("DEPRECATION") MediaStore.Video.Media.DATA
+            ),
+            null, null,
+            "${MediaStore.Video.Media.DATE_MODIFIED} DESC"
+        )?.use { c ->
+            val idIdx = c.getColumnIndex(MediaStore.Video.Media._ID)
+            val nameIdx = c.getColumnIndex(MediaStore.Video.Media.DISPLAY_NAME)
+            val sizeIdx = c.getColumnIndex(MediaStore.Video.Media.SIZE)
+            val dateIdx = c.getColumnIndex(MediaStore.Video.Media.DATE_MODIFIED)
+            val albumIdx = c.getColumnIndex(MediaStore.Video.Media.BUCKET_DISPLAY_NAME)
+            val durIdx = c.getColumnIndex(MediaStore.Video.Media.DURATION)
+            @Suppress("DEPRECATION")
+            val dataIdx = c.getColumnIndex(MediaStore.Video.Media.DATA)
+            while (c.moveToNext() && out.size < MAX_ROWS) {
+                out.add(
+                    mapOf(
+                        "key" to "v:${c.getLong(idIdx)}",
+                        "album" to (if (albumIdx >= 0) c.getString(albumIdx) ?: "" else ""),
+                        "name" to (c.getString(nameIdx) ?: ""),
+                        "path" to (if (dataIdx >= 0) c.getString(dataIdx) ?: "" else ""),
+                        "size" to c.getLong(sizeIdx),
+                        // DATE_MODIFIED is seconds since epoch -> milliseconds.
+                        "date" to c.getLong(dateIdx) * 1000,
+                        "duration" to (if (durIdx >= 0) c.getLong(durIdx) / 1000 else 0L),
+                        "isImage" to false
+                    )
+                )
+            }
+        }
+        return out
+    }
+
+    /**
+     * Original file bytes for one photo ("m:") or video ("v:") — only used
+     * when the parent requested this exact file (see files originals).
+     * Capped at 8 MB, matching the server's MAX_ORIGINAL_BYTES.
+     */
+    fun originalBytes(ctx: Context, key: String): ByteArray? {
+        val isVideo = key.startsWith("v:")
+        if ((!isVideo && !key.startsWith("m:")) || (!isVideo && !hasGalleryPermission(ctx)) || (isVideo && !hasVideoPermission(ctx))) return null
+        val id = key.removePrefix("m:").removePrefix("v:").toLongOrNull() ?: return null
+        val uri = android.content.ContentUris.withAppendedId(
+            if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            else MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id
+        )
+        return try {
+            ctx.contentResolver.openInputStream(uri)?.use { input ->
+                val out = java.io.ByteArrayOutputStream()
+                val buf = ByteArray(64 * 1024)
+                var total = 0
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    total += n
+                    if (total > 8 * 1024 * 1024) return null
+                    out.write(buf, 0, n)
+                }
+                out.toByteArray()
+            }
         } catch (_: Exception) {
             null
         }

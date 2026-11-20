@@ -16,7 +16,7 @@ class InstalledAppsScreen extends StatefulWidget {
 }
 
 class _InstalledAppsScreenState extends State<InstalledAppsScreen> {
-  final _api = ApiClient();
+  ApiClient get _api => AuthService.instance.api;
   List<InstalledApp> _apps = [];
   String? _status;
   bool _loading = false;

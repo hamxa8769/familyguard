@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:familyguard_core/familyguard_core.dart';
+import '../../common/widgets.dart';
 import '../../feature_module.dart';
+import '../../state/parent_state.dart';
 
 /// Parent side of browsing history: browser-app sessions only.
 /// The screen states the limit plainly — visited URLs are not collected,
@@ -20,36 +22,22 @@ class BrowsingModule implements FeatureModule {
   Widget buildScreen(BuildContext context) => const BrowsingScreen();
 }
 
-class BrowsingScreen extends StatefulWidget {
+class BrowsingScreen extends StatelessWidget {
   const BrowsingScreen({super.key});
 
   @override
-  State<BrowsingScreen> createState() => _BrowsingScreenState();
+  Widget build(BuildContext context) {
+    return DeviceScoped(
+      title: 'Browsing History',
+      builder: (context, deviceId) => _BrowsingBody(deviceId: deviceId),
+    );
+  }
 }
 
-class _BrowsingScreenState extends State<BrowsingScreen> {
-  final _api = ApiClient();
-  final _deviceId = TextEditingController();
-  List<BrowsingSession> _sessions = [];
-  String? _status;
+class _BrowsingBody extends StatelessWidget {
+  const _BrowsingBody({required this.deviceId});
 
-  Future<void> _load() async {
-    if (_deviceId.text.isEmpty) {
-      setState(() => _status = 'Enter a device ID first.');
-      return;
-    }
-    try {
-      final data = await _api.get('/api/browsing/${_deviceId.text}');
-      setState(() {
-        _sessions = (data['sessions'] as List? ?? [])
-            .map((s) => BrowsingSession.fromMap(s as Map))
-            .toList();
-        _status = null;
-      });
-    } on ApiException catch (e) {
-      setState(() => _status = 'Could not load sessions: ${e.message}');
-    }
-  }
+  final String deviceId;
 
   String _time(int ms) {
     final dt = DateTime.fromMillisecondsSinceEpoch(ms);
@@ -57,45 +45,39 @@ class _BrowsingScreenState extends State<BrowsingScreen> {
   }
 
   @override
-  void dispose() {
-    _deviceId.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Browsing History')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _deviceId,
-            decoration: const InputDecoration(labelText: 'Device ID'),
-          ),
-          const SizedBox(height: 8),
-          FilledButton(onPressed: _load, child: const Text('Load sessions')),
-          if (_status != null) ...[
-            const SizedBox(height: 8),
-            Text(_status!),
-          ],
-          const SizedBox(height: 8),
-          const Text(
-            'Browser sessions only: which browser was open, when, and for '
-            'how long. The pages and URLs visited are NOT collected.',
-          ),
-          for (final s in _sessions)
-            ListTile(
-              leading: const Icon(Icons.language),
-              title: Text(s.browserLabel),
-              subtitle: Text(
-                '${_time(s.startedAt)} – ${_time(s.endedAt)} • '
-                '${s.durationSeconds ~/ 60} min ${s.durationSeconds % 60} s',
-              ),
+      // ApiView (Phase 5): loading spinner, error + retry, and
+      // pull-to-refresh — previously silent load, inline error line only.
+      body: ApiView<List<BrowsingSession>>(
+        load: () async {
+          final data = await ParentState.instance.api.get('/api/browsing/$deviceId');
+          return (data['sessions'] as List? ?? [])
+              .map((s) => BrowsingSession.fromMap(s as Map))
+              .toList();
+        },
+        builder: (context, sessions, _) => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              'Browser sessions only: which browser was open, when, and for '
+              'how long. The pages and URLs visited are NOT collected.',
             ),
-          if (_sessions.isEmpty)
-            const ListTile(title: Text('No browser sessions yet.')),
-        ],
+            const SizedBox(height: 8),
+            for (final s in sessions)
+              ListTile(
+                leading: const Icon(Icons.language),
+                title: Text(s.browserLabel),
+                subtitle: Text(
+                  '${_time(s.startedAt)} – ${_time(s.endedAt)} • '
+                  '${s.durationSeconds ~/ 60} min ${s.durationSeconds % 60} s',
+                ),
+              ),
+            if (sessions.isEmpty)
+              const EmptyHint('No browser sessions yet.'),
+          ],
+        ),
       ),
     );
   }

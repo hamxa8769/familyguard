@@ -17,6 +17,12 @@ class EnforcementStatus {
   bool get hasAppRules => raw['hasAppRules'] == true;
   bool get hasWebRules => raw['hasWebRules'] == true;
 
+  /// Android "Private DNS" mode as the device reports it: "off",
+  /// "opportunistic" or "hostname". "hostname" bypasses the DNS web filter,
+  /// so the parent is warned about it.
+  String? get privateDnsMode => raw['privateDnsMode'] as String?;
+  String? get privateDnsHostname => raw['privateDnsHostname'] as String?;
+
   Map<String, dynamic> toJson() => Map<String, dynamic>.from(raw);
 }
 
@@ -48,6 +54,9 @@ class Enforcement {
       'limitMinutes': r[0]['dailyMinutes'],
       'bedtimeStart': schedule?['startHour'],
       'bedtimeEnd': schedule?['endHour'],
+      // Minute granularity: a 22:30 bedtime must not block at 22:00.
+      'bedtimeStartMinute': schedule?['startMinute'],
+      'bedtimeEndMinute': schedule?['endMinute'],
       'blockedDomains': r[3]['blockedDomains'] ?? const [],
     };
     final res = await _ch.invokeMethod<Map>('setRules', {

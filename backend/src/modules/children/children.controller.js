@@ -1,5 +1,6 @@
 import { store, nextId } from '../../config/store.js';
 import { newPairingCode } from '../pairing/pairing.service.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
 
 // A child as the parent sees it: profile + paired devices + current pairing code.
 function withDevices(child) {
@@ -35,7 +36,8 @@ export async function listChildren(req, res, next) {
     const children = store.children
       .filter((c) => c.parentId === req.user.id)
       .map(withDevices);
-    res.json({ children });
+    const { items, total, limit, offset } = pageOf(children, parseLimitOffset(req));
+    res.json({ children: items, total, limit, offset });
   } catch (err) {
     next(err);
   }

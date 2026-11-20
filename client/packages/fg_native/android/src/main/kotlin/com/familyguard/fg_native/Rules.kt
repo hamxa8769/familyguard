@@ -19,16 +19,29 @@ data class Rules(
     val limitMinutes: Int? = null,
     val bedtimeStart: Int? = null,
     val bedtimeEnd: Int? = null,
+    /** Minutes past the bedtime start/end hour (0-59, default 0). */
+    val bedtimeStartMinute: Int = 0,
+    val bedtimeEndMinute: Int = 0,
     val blockedDomains: List<String> = emptyList(),
 ) {
     val hasAppRules: Boolean
         get() = blockedApps.isNotEmpty() || limitMinutes != null || bedtimeStart != null
 
-    fun bedtimeNow(hour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)): Boolean {
+    /**
+     * Minute-granular bedtime check: a 22:30 bedtime must not block at
+     * 22:00-22:29 and must block at 22:30. [hour]/[minute] default to now.
+     */
+    fun bedtimeNow(
+        hour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
+        minute: Int = Calendar.getInstance().get(Calendar.MINUTE),
+    ): Boolean {
         val s = bedtimeStart ?: return false
         val e = bedtimeEnd ?: return false
-        if (s == e) return false
-        return if (s < e) hour in s until e else hour >= s || hour < e
+        val start = s * 60 + bedtimeStartMinute.coerceIn(0, 59)
+        val end = e * 60 + bedtimeEndMinute.coerceIn(0, 59)
+        if (start == end) return false
+        val now = hour * 60 + minute
+        return if (start < end) now in start until end else now >= start || now < end
     }
 
     fun domainBlocked(name: String): Boolean {
@@ -53,6 +66,8 @@ data class Rules(
                 limitMinutes = intOrNull("limitMinutes"),
                 bedtimeStart = intOrNull("bedtimeStart"),
                 bedtimeEnd = intOrNull("bedtimeEnd"),
+                bedtimeStartMinute = intOrNull("bedtimeStartMinute") ?: 0,
+                bedtimeEndMinute = intOrNull("bedtimeEndMinute") ?: 0,
                 blockedDomains = strings("blockedDomains").map { it.trim().lowercase().trimEnd('.') },
             )
         }

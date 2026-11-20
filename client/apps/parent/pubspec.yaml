@@ -1,7 +1,7 @@
 name: familyguard_parent
 description: FamilyGuard parent app — dashboard and controls on the parent's device.
 publish_to: "none"
-version: 0.9.0+10
+version: 0.9.1+11
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -19,6 +19,8 @@ dependencies:
   workmanager: ^0.10.10
   fg_notify:
     path: ../../packages/fg_notify
+  share_plus: ^13.3.1
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

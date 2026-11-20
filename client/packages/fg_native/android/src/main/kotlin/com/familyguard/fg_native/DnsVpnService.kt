@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
+import android.provider.Settings
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
@@ -152,6 +153,25 @@ class DnsVpnService : VpnService() {
 
         /** True when the child has approved the VPN (system dialog). */
         fun prepared(ctx: Context) = VpnService.prepare(ctx) == null
+
+        /**
+         * Android "Private DNS" mode ("off", "opportunistic" or "hostname").
+         * "hostname" bypasses this DNS-only filter: the device resolves
+         * names through the configured private resolver instead. Reported
+         * in the enforcement status blob so the parent can be warned.
+         */
+        fun privateDnsMode(ctx: Context): String? = try {
+            Settings.Global.getString(ctx.contentResolver, Settings.Global.PRIVATE_DNS_MODE)
+        } catch (_: Exception) {
+            null
+        }
+
+        /** The hostname above when [privateDnsMode] is "hostname". */
+        fun privateDnsHostname(ctx: Context): String? = try {
+            Settings.Global.getString(ctx.contentResolver, Settings.Global.PRIVATE_DNS_HOSTNAME)
+        } catch (_: Exception) {
+            null
+        }
 
         /** Starts/refreshes the filter when there are blocked domains, stops it otherwise. */
         fun sync(ctx: Context): Boolean {

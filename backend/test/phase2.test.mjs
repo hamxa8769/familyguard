@@ -11,6 +11,24 @@ let base;
 let parentToken;
 let childToken;
 let childId;
+// Real paired devices (with device tokens) for the apps/browsing syncs:
+// sync routes are device-scoped, so a fake device id no longer passes.
+let appsDeviceId;
+let appsDeviceToken;
+let browseDeviceId;
+let browseDeviceToken;
+
+async function pairDevice(name) {
+  const child = await req('POST', '/api/children', parentToken, { displayName: name });
+  assert.equal(child.status, 201, JSON.stringify(child.data));
+  const paired = await req('POST', '/api/pair', null, {
+    code: child.data.pairingCode,
+    platform: 'android',
+    deviceName: name,
+  });
+  assert.equal(paired.status, 201, JSON.stringify(paired.data));
+  return paired.data; // { token, device, child }
+}
 
 async function req(method, path, token, body) {
   const res = await fetch(`${base}${path}`, {
@@ -44,15 +62,20 @@ before(async () => {
   assert.equal(child.status, 201, JSON.stringify(child.data));
   childToken = child.data.token;
   childId = child.data.user.id;
+  const appsPaired = await pairDevice('apps-phone');
+  appsDeviceId = appsPaired.device.id;
+  appsDeviceToken = appsPaired.token;
+  const browsePaired = await pairDevice('browse-phone');
+  browseDeviceId = browsePaired.device.id;
+  browseDeviceToken = browsePaired.token;
 });
 
 after(() => server.close());
 
 describe('installed apps', () => {
-  const deviceId = 'dev-apps-1';
-
   it('child syncs apps; parent lists them; re-sync upserts by packageName', async () => {
-    const synced = await req('POST', `/api/apps/${deviceId}/sync`, childToken, {
+    const deviceId = appsDeviceId;
+    const synced = await req('POST', `/api/apps/${deviceId}/sync`, appsDeviceToken, {
       apps: [
         {
           packageName: 'com.example.game',
@@ -73,7 +96,7 @@ describe('installed apps', () => {
     assert.ok(listed.data.apps.every((a) => a.lastSeenAt));
 
     // Re-sync with a new version: still 2 rows, version updated.
-    const resynced = await req('POST', `/api/apps/${deviceId}/sync`, childToken, {
+    const resynced = await req('POST', `/api/apps/${deviceId}/sync`, appsDeviceToken, {
       apps: [{ packageName: 'com.example.game', label: 'Example Game', versionName: '1.1' }],
     });
     assert.equal(resynced.status, 200);
@@ -83,12 +106,12 @@ describe('installed apps', () => {
   });
 
   it('sync with an empty apps list is rejected (400)', async () => {
-    const res = await req('POST', `/api/apps/${deviceId}/sync`, childToken, { apps: [] });
+    const res = await req('POST', `/api/apps/${appsDeviceId}/sync`, appsDeviceToken, { apps: [] });
     assert.equal(res.status, 400);
   });
 
   it('a parent cannot sync apps', async () => {
-    const res = await req('POST', `/api/apps/${deviceId}/sync`, parentToken, {
+    const res = await req('POST', `/api/apps/${appsDeviceId}/sync`, parentToken, {
       apps: [{ packageName: 'com.example.x' }],
     });
     assert.equal(res.status, 403);
@@ -96,10 +119,9 @@ describe('installed apps', () => {
 });
 
 describe('browsing sessions', () => {
-  const deviceId = 'dev-browse-1';
-
   it('child syncs sessions; parent lists them newest first (no URLs)', async () => {
-    const synced = await req('POST', `/api/browsing/${deviceId}/sync`, childToken, {
+    const deviceId = browseDeviceId;
+    const synced = await req('POST', `/api/browsing/${deviceId}/sync`, browseDeviceToken, {
       sessions: [
         {
           packageName: 'com.android.chrome',
@@ -129,7 +151,7 @@ describe('browsing sessions', () => {
   });
 
   it('sync with an empty sessions list is rejected (400)', async () => {
-    const res = await req('POST', `/api/browsing/${deviceId}/sync`, childToken, {
+    const res = await req('POST', `/api/browsing/${browseDeviceId}/sync`, browseDeviceToken, {
       sessions: [],
     });
     assert.equal(res.status, 400);

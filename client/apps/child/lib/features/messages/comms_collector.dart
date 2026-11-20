@@ -17,6 +17,25 @@ class CommsCollector {
     }
   }
 
+  /// Per-type grants: contacts / SMS / call log independently, so granting
+  /// only READ_SMS still syncs SMS (no all-or-nothing gate).
+  Future<Map<String, bool>> hasPermissions() async {
+    if (!Platform.isAndroid) return const {};
+    try {
+      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>('hasPermissions');
+      if (result == null) return const {};
+      return {
+        'contacts': result['contacts'] == true,
+        'sms': result['sms'] == true,
+        'callLog': result['callLog'] == true,
+      };
+    } catch (_) {
+      // Older native bridge without the map: fall back to the all-or-nothing check.
+      final all = await hasPermission();
+      return {'contacts': all, 'sms': all, 'callLog': all};
+    }
+  }
+
   Future<void> requestPermission() async {
     if (!Platform.isAndroid) return;
     try {

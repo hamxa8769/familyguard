@@ -46,14 +46,25 @@ before(async () => {
 
 after(() => server.close());
 
+// A real paired device: the only way to hold a device token. The child
+// side of remote commands / media acts with this token, not a child-user
+// token (device-scoped routes now verify the caller's device).
+async function pairDevice(name) {
+  const child = await req('POST', '/api/children', parentToken, { displayName: name });
+  assert.equal(child.status, 201, JSON.stringify(child.data));
+  const paired = await req('POST', '/api/pair', null, {
+    code: child.data.pairingCode,
+    platform: 'android',
+    deviceName: name,
+  });
+  assert.equal(paired.status, 201, JSON.stringify(paired.data));
+  return paired.data; // { token, device, child }
+}
+
 describe('remote commands', () => {
   it('parent creates a lock_now command; child polls it; child acks it', async () => {
-    const device = await req('POST', '/api/devices', parentToken, {
-      platform: 'android',
-      deviceName: 'child-phone',
-    });
-    assert.equal(device.status, 201);
-    const deviceId = device.data.id;
+    const { token: deviceToken, device } = await pairDevice('child-phone');
+    const deviceId = device.id;
 
     const created = await req('POST', '/api/remotecommands', parentToken, {
       deviceId,
@@ -63,40 +74,42 @@ describe('remote commands', () => {
     assert.equal(created.data.status, 'pending');
     assert.equal(created.data.type, 'lock_now');
 
-    // A child (any authenticated user) polls for pending commands.
+    // The paired device polls for pending commands with its device token.
     const polled = await req(
       'GET',
       `/api/remotecommands?deviceId=${deviceId}&status=pending`,
-      childToken,
+      deviceToken,
     );
     assert.equal(polled.status, 200);
     assert.equal(polled.data.commands.length, 1);
 
-    const acked = await req('POST', `/api/remotecommands/${created.data.id}/ack`, childToken, {
+    const acked = await req('POST', `/api/remotecommands/${created.data.id}/ack`, deviceToken, {
       status: 'acknowledged',
     });
     assert.equal(acked.status, 200);
     assert.equal(acked.data.status, 'acknowledged');
 
     // A completed command cannot be acked again.
-    const done = await req('POST', `/api/remotecommands/${created.data.id}/ack`, childToken, {
+    const done = await req('POST', `/api/remotecommands/${created.data.id}/ack`, deviceToken, {
       status: 'completed',
     });
     assert.equal(done.status, 200);
-    const again = await req('POST', `/api/remotecommands/${created.data.id}/ack`, childToken, {
+    const again = await req('POST', `/api/remotecommands/${created.data.id}/ack`, deviceToken, {
       status: 'completed',
     });
     assert.equal(again.status, 409);
   });
 
   it('rejects unknown command types and empty messages', async () => {
+    const { device } = await pairDevice('child-phone-x');
+    const deviceId = device.id;
     const bad = await req('POST', '/api/remotecommands', parentToken, {
-      deviceId: 'x',
+      deviceId,
       type: 'spy_continuously',
     });
     assert.equal(bad.status, 400);
     const empty = await req('POST', '/api/remotecommands', parentToken, {
-      deviceId: 'x',
+      deviceId,
       type: 'send_message',
       payload: { text: '   ' },
     });
@@ -114,11 +127,8 @@ describe('remote commands', () => {
 
 describe('media captures', () => {
   it('screenshot request creates a command + a 7-day capture, visible to the child', async () => {
-    const device = await req('POST', '/api/devices', parentToken, {
-      platform: 'android',
-      deviceName: 'child-phone-2',
-    });
-    const deviceId = device.data.id;
+    const { token: deviceToken, device } = await pairDevice('child-phone-2');
+    const deviceId = device.id;
     const res = await req('POST', '/api/media/screenshot-request', parentToken, { deviceId });
     assert.equal(res.status, 201, JSON.stringify(res.data));
     assert.equal(res.data.capture.kind, 'screenshot');
@@ -129,17 +139,14 @@ describe('media captures', () => {
       (24 * 60 * 60_000);
     assert.ok(ttlDays > 6.9 && ttlDays < 7.1, `retention was ${ttlDays} days`);
 
-    const list = await req('GET', `/api/media?deviceId=${deviceId}`, childToken);
+    const list = await req('GET', `/api/media?deviceId=${deviceId}`, deviceToken);
     assert.equal(list.status, 200);
     assert.equal(list.data.captures.length, 1);
   });
 
   it('audio over 30 seconds is rejected', async () => {
-    const device = await req('POST', '/api/devices', parentToken, {
-      platform: 'android',
-      deviceName: 'child-phone-3',
-    });
-    const deviceId = device.data.id;
+    const { token: deviceToken, device } = await pairDevice('child-phone-3');
+    const deviceId = device.id;
     const reqAudio = await req('POST', '/api/media/audio-request', parentToken, {
       deviceId,
       source: 'sos',
@@ -148,11 +155,11 @@ describe('media captures', () => {
     const tooLong = await req(
       'POST',
       `/api/media/${reqAudio.data.capture.id}/complete`,
-      childToken,
+      deviceToken,
       { durationSeconds: 31 },
     );
     assert.equal(tooLong.status, 400);
-    const ok = await req('POST', `/api/media/${reqAudio.data.capture.id}/complete`, childToken, {
+    const ok = await req('POST', `/api/media/${reqAudio.data.capture.id}/complete`, deviceToken, {
       durationSeconds: 12,
     });
     assert.equal(ok.status, 200);

@@ -1,5 +1,6 @@
 import { store, nextId } from '../../config/store.js';
 import { accessibleDeviceIds } from '../../middleware/access.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
 import { startOfToday } from '../screentime/screentime.service.js';
 
 // Child asks for extra screen time today; the parent approves or denies.
@@ -30,15 +31,17 @@ export async function createRequest(req, res, next) {
 }
 
 // Parent: requests for all their devices. Device: its own requests.
+// Was capped at the newest 50; now paginated (default limit 500).
 export async function listRequests(req, res, next) {
   try {
     const ids = new Set(accessibleDeviceIds(req.user));
     const requests = store.timeRequests
       .filter((r) => ids.has(r.deviceId))
       .filter((r) => !req.query.status || r.status === req.query.status)
-      .slice(-50)
+      .slice()
       .reverse();
-    res.json({ requests });
+    const { items, total, limit, offset } = pageOf(requests, parseLimitOffset(req));
+    res.json({ requests: items, total, limit, offset });
   } catch (err) {
     next(err);
   }

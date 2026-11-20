@@ -66,7 +66,23 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
             );
           }
           if (_state.error != null) {
-            return EmptyHint('Could not load: ${_state.error}');
+            // Phase 5: the error state had no retry — only the empty hint.
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Could not load: ${_state.error}',
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                        onPressed: _state.refresh,
+                        child: const Text('Try again')),
+                  ],
+                ),
+              ),
+            );
           }
           if (_state.children.isEmpty) {
             return const EmptyHint(

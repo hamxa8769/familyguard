@@ -15,18 +15,16 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <!-- SOS-only short audio (max 30 s, visible indicator + sound). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- Foreground services: screen-capture, audio recording, block watcher. -->
+    <!-- Foreground services: screen-capture, audio recording. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <!-- Notifications for screenshot countdowns and remote commands. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Installed-apps inventory. Restricted on Play; sideload-only here. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <!-- Block overlay shown when a blocked app is opened. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
         android:label="familyguard_child"
         android:name="${applicationName}"
@@ -74,12 +72,6 @@
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
             </intent-filter>
         </receiver>
-        <!-- Foreground service that watches the foreground app (UsageStats)
-             and enforces bedtime / app-blocking with a visible overlay. -->
-        <service
-            android:name=".BlockWatcherService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false" />
         <!-- Foreground service for on-request screenshots (MediaProjection)
              and SOS audio recording. Runs only while a capture is in
              progress, with a persistent notification. -->
@@ -87,13 +79,6 @@
             android:name=".CaptureService"
             android:foregroundServiceType="mediaProjection|microphone"
             android:exported="false" />
-        <receiver
-            android:name=".BootReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

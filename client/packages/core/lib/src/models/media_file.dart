@@ -6,9 +6,11 @@ class MediaFile {
     required this.sizeBytes,
     required this.dateMillis,
     this.isImage = true,
+    this.durationSeconds = 0,
     this.key = '',
     this.album = '',
     this.hasThumb = false,
+    this.hasOriginal = false,
   });
 
   final String name;
@@ -16,6 +18,9 @@ class MediaFile {
   final int sizeBytes;
   final int dateMillis;
   final bool isImage;
+
+  /// Video length in seconds (0 for photos / unknown).
+  final int durationSeconds;
 
   /// Stable id of the file on the device (Android media id / path hash);
   /// used to match its preview thumbnail.
@@ -26,6 +31,16 @@ class MediaFile {
 
   /// Parent side: the server has a preview thumbnail for this file.
   final bool hasThumb;
+
+  /// Parent side: the server has the full-resolution original (uploaded by
+  /// the child after the parent requested it).
+  final bool hasOriginal;
+
+  String get durationLabel {
+    final m = durationSeconds ~/ 60;
+    final s = durationSeconds % 60;
+    return m > 0 ? '$m:${s.toString().padLeft(2, '0')}' : '0:${s.toString().padLeft(2, '0')}';
+  }
 
   DateTime get date => DateTime.fromMillisecondsSinceEpoch(dateMillis);
 
@@ -45,6 +60,7 @@ class MediaFile {
         'size': sizeBytes,
         'date': dateMillis,
         'isImage': isImage,
+        'duration': durationSeconds,
         'key': key,
         'album': album,
       };
@@ -59,8 +75,12 @@ class MediaFile {
             ? map['date'] as int
             : int.tryParse('${map['date']}') ?? 0,
         isImage: map['isImage'] != false,
+        durationSeconds: (map['duration'] ?? 0) is int
+            ? map['duration'] as int
+            : int.tryParse('${map['duration']}') ?? 0,
         key: (map['key'] ?? '').toString(),
         album: (map['album'] ?? '').toString(),
         hasThumb: map['hasThumb'] == true,
+        hasOriginal: map['hasOriginal'] == true,
       );
 }

@@ -1,10 +1,11 @@
 import { buildDeviceReport } from '../reports/reports.service.js';
+import { listAudit } from '../../db/repository.js';
 
 // Returns the same data a parent sees, plus a plain-language list of what is
 // being collected — shown to the child so monitoring is never hidden.
 export async function whatParentSees(req, res, next) {
   try {
-    const report = buildDeviceReport(req.params.deviceId);
+    const report = await buildDeviceReport(req.params.deviceId);
     res.json({
       notice: 'This is exactly what your parent/guardian can see about this device.',
       collected: [
@@ -27,6 +28,20 @@ export async function whatParentSees(req, res, next) {
       photoPreviews: req.device?.photoPreviews === true,
       report,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /api/transparency/:deviceId/audit — the audit log itself, newest
+// first. It was written since Phase 1 but never readable (audit §9.6).
+// ?limit= clamps 1..500, default 100.
+export async function listAuditLog(req, res, next) {
+  try {
+    const raw = parseInt(req.query.limit, 10);
+    const limit = Number.isNaN(raw) ? 100 : Math.min(Math.max(raw, 1), 500);
+    const auditLog = await listAudit(req.params.deviceId, limit);
+    res.json({ deviceId: req.params.deviceId, auditLog, limit });
   } catch (err) {
     next(err);
   }

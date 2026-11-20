@@ -262,13 +262,16 @@ class _ChildHomeState extends State<ChildHome> with WidgetsBindingObserver {
                   QuickAction(
                       icon: Icons.rule_outlined,
                       label: 'Agreement',
-                      // No child id is stored at pairing yet; the screen
-                      // shows its empty state until one is available.
-                      onTap: () => _open(const AgreementScreen(childId: ''))),
+                      // Until child accounts land, the paired device id is
+                      // used as the child id (same stand-in as the other
+                      // child screens).
+                      onTap: () =>
+                          _open(AgreementScreen(childId: _deviceId))),
                   QuickAction(
                       icon: Icons.emoji_events_outlined,
                       label: 'Rewards',
-                      onTap: () => _open(const RewardsScreen(childId: ''))),
+                      onTap: () =>
+                          _open(RewardsScreen(childId: _deviceId))),
                 ],
               ),
             ],

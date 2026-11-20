@@ -16,6 +16,7 @@ class AlertWatcher {
   static final AlertWatcher instance = AlertWatcher._();
 
   static const _sinceKey = 'feed_since';
+  static const _badCyclesPrefix = 'enforcement_bad_cycles_';
   static const _task = 'familyguard.parent-alerts';
   static const foregroundInterval = Duration(seconds: 30);
 
@@ -47,6 +48,9 @@ class AlertWatcher {
     stopForeground();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sinceKey);
+    for (final k in prefs.getKeys().where((k) => k.startsWith(_badCyclesPrefix))) {
+      await prefs.remove(k);
+    }
     if (FgNotify.supported) await Workmanager().cancelByUniqueName(_task);
   }
 
@@ -72,6 +76,9 @@ class AlertWatcher {
       final res = await AuthService.instance.api
           .get('/api/feed?since=${Uri.encodeQueryComponent(since ?? '')}');
       final now = res['now'] as String;
+      // Enforcement health rides on the same check: alert (not just
+      // display) when a device reports rules that are not active.
+      await _checkEnforcement();
       // First run: start from now instead of replaying old history.
       if (since == null) {
         await prefs.setString(_sinceKey, now);
@@ -93,6 +100,58 @@ class AlertWatcher {
       return 0;
     } finally {
       _checking = false;
+    }
+  }
+
+  /// Checks every device's last reported enforcement status and alerts
+  /// the parent (same FgNotify pattern as the feed alerts above) when
+  /// rules exist but are not active — app rules set but
+  /// `appRulesActive` false, web rules set but `webFilterActive` false,
+  /// or Private DNS set to a hostname (which bypasses the DNS web
+  /// filter). A device only counts after more than one consecutive bad
+  /// check, and each bad streak alerts exactly once (on the 2nd bad
+  /// cycle); a recovered device resets, so a new streak alerts again.
+  /// Best-effort: a failed check never breaks the feed alerts.
+  Future<void> _checkEnforcement() async {
+    try {
+      final res = await AuthService.instance.api.get('/api/devices');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      final devices = (res['devices'] as List? ?? []).cast<Map>();
+      for (final d in devices) {
+        final deviceId = '${d['id']}';
+        final e = d['enforcement'] as Map?;
+        final problems = <String>[];
+        if (e != null) {
+          if (e['hasAppRules'] == true && e['appRulesActive'] != true) {
+            problems.add(
+                'app blocking, bedtime or screen-time rules are set but not active');
+          }
+          if (e['hasWebRules'] == true && e['webFilterActive'] != true) {
+            problems.add('the web filter is set but not running');
+          }
+          if (e['hasWebRules'] == true && e['privateDnsMode'] == 'hostname') {
+            problems.add(
+                'Private DNS is set to a hostname, so blocked sites may still load');
+          }
+        }
+        final key = '$_badCyclesPrefix$deviceId';
+        if (problems.isEmpty) {
+          if (prefs.getInt(key) != 0) await prefs.setInt(key, 0);
+          continue;
+        }
+        final cycles = (prefs.getInt(key) ?? 0) + 1;
+        await prefs.setInt(key, cycles);
+        if (cycles != 2) continue; // alert once, on the 2nd bad cycle
+        final name = '${d['deviceName'] ?? 'Device $deviceId'}';
+        await FgNotify.show(
+          id: 'enforcement-$deviceId'.hashCode & 0x7fffffff,
+          title: 'Enforcement not active on $name',
+          body: '${problems.join('; ')}.',
+        );
+      }
+    } on ApiException {
+      // Best effort: a failed check must not break the feed alerts.
     }
   }
 

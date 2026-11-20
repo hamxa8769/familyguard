@@ -45,14 +45,25 @@ before(async () => {
 
 after(() => server.close());
 
+// A real paired device: the child side of media upload acts with a device
+// token, not a child-user token (capture routes now verify the caller's
+// device).
+async function pairDevice(name) {
+  const child = await req('POST', '/api/children', parentToken, { displayName: name });
+  assert.equal(child.status, 201, JSON.stringify(child.data));
+  const paired = await req('POST', '/api/pair', null, {
+    code: child.data.pairingCode,
+    platform: 'android',
+    deviceName: name,
+  });
+  assert.equal(paired.status, 201, JSON.stringify(paired.data));
+  return paired.data; // { token, device, child }
+}
+
 describe('media upload', () => {
   it('child uploads a screenshot PNG; parent downloads it; delete removes it', async () => {
-    const device = await req('POST', '/api/devices', parentToken, {
-      platform: 'android',
-      deviceName: 'child-phone-2',
-    });
-    assert.equal(device.status, 201);
-    const deviceId = device.data.id;
+    const { token: deviceToken, device } = await pairDevice('child-phone-2');
+    const deviceId = device.id;
     const requested = await req('POST', '/api/media/screenshot-request', parentToken, {
       deviceId,
     });
@@ -60,7 +71,7 @@ describe('media upload', () => {
     const captureId = requested.data.capture.id;
     // A tiny valid PNG header (8 bytes) is enough to exercise the path.
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString('base64');
-    const uploaded = await req('POST', `/api/media/${captureId}/upload`, childToken, {
+    const uploaded = await req('POST', `/api/media/${captureId}/upload`, deviceToken, {
       dataBase64: png,
       mimeType: 'image/png',
     });
@@ -78,18 +89,15 @@ describe('media upload', () => {
   });
 
   it('audio longer than 30 seconds is rejected on upload', async () => {
-    const device = await req('POST', '/api/devices', parentToken, {
-      platform: 'android',
-      deviceName: 'child-phone-3',
-    });
-    const deviceId = device.data.id;
+    const { token: deviceToken, device } = await pairDevice('child-phone-3');
+    const deviceId = device.id;
     const requested = await req('POST', '/api/media/audio-request', parentToken, {
       deviceId,
       source: 'sos',
     });
     assert.equal(requested.status, 201);
     const captureId = requested.data.capture.id;
-    const tooLong = await req('POST', `/api/media/${captureId}/upload`, childToken, {
+    const tooLong = await req('POST', `/api/media/${captureId}/upload`, deviceToken, {
       dataBase64: Buffer.from('x').toString('base64'),
       mimeType: 'audio/mp4',
       durationSeconds: 31,
@@ -98,22 +106,19 @@ describe('media upload', () => {
   });
 
   it('unknown mime type and oversized files are rejected', async () => {
-    const device = await req('POST', '/api/devices', parentToken, {
-      platform: 'android',
-      deviceName: 'child-phone-4',
-    });
-    const deviceId = device.data.id;
+    const { token: deviceToken, device } = await pairDevice('child-phone-4');
+    const deviceId = device.id;
     const requested = await req('POST', '/api/media/screenshot-request', parentToken, {
       deviceId,
     });
     const captureId = requested.data.capture.id;
-    const badMime = await req('POST', `/api/media/${captureId}/upload`, childToken, {
+    const badMime = await req('POST', `/api/media/${captureId}/upload`, deviceToken, {
       dataBase64: Buffer.from('x').toString('base64'),
       mimeType: 'video/mp4',
     });
     assert.equal(badMime.status, 400);
     const big = Buffer.alloc(8 * 1024 * 1024 + 1).toString('base64');
-    const tooBig = await req('POST', `/api/media/${captureId}/upload`, childToken, {
+    const tooBig = await req('POST', `/api/media/${captureId}/upload`, deviceToken, {
       dataBase64: big,
       mimeType: 'image/png',
     });

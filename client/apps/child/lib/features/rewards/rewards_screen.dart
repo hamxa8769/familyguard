@@ -16,7 +16,7 @@ class RewardsScreen extends StatefulWidget {
 }
 
 class _RewardsScreenState extends State<RewardsScreen> {
-  final _api = ApiClient();
+  ApiClient get _api => AuthService.instance.api;
   RewardSummary? _summary;
   String? _status;
   bool _loading = true;

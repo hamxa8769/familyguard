@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:familyguard_core/familyguard_core.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Dart side of the native Android channels (see MainActivity.kt).
 ///
@@ -106,17 +105,9 @@ class NativeCollectors {
     return Map<String, dynamic>.from(raw);
   }
 
-  // ---- Enforcement watcher ----
-
-  static Future<void> startWatcher() async {
-    if (!_isAndroid) return;
-    await _enforcement.invokeMethod('startWatcher');
-  }
-
-  static Future<void> stopWatcher() async {
-    if (!_isAndroid) return;
-    await _enforcement.invokeMethod('stopWatcher');
-  }
+  // ---- Enforcement (overlay permission for the block screen) ----
+  // Rules themselves are fetched and applied by Enforcement.fetchAndApply
+  // (System A); there is no second watcher anymore.
 
   static Future<bool> hasOverlayPermission() async {
     if (!_isAndroid) return false;
@@ -147,49 +138,5 @@ class NativeCollectors {
       if (durationSeconds != null) 'durationSeconds': durationSeconds,
     });
     return Map<String, dynamic>.from(data as Map);
-  }
-}
-
-/// Syncs the parent-set enforcement rules (app blocking + bedtime) from
-/// the backend into SharedPreferences, where the native BlockWatcherService
-/// reads them. Called by the child app when it polls remote commands.
-class EnforcementSync {
-  /// Returns true when any rule is active (and the watcher was started).
-  static Future<bool> sync(ApiClient api, String deviceId) async {
-    if (!Platform.isAndroid || deviceId.isEmpty) return false;
-    final prefs = await SharedPreferences.getInstance();
-    try {
-      final blocked = await api.get('/api/appblocking/$deviceId');
-      final apps = (blocked['apps'] as List? ?? []).map((a) => a.toString()).toList();
-      await prefs.setString('fg_blocked_apps', jsonEncode(apps));
-
-      final bedtime = await api.get('/api/bedtime/$deviceId');
-      final schedule = bedtime['schedule'] as Map?;
-      if (schedule != null) {
-        final start = (schedule['startHour'] as num).toInt();
-        final end = (schedule['endHour'] as num).toInt();
-        await prefs.setString(
-          'fg_bedtime',
-          jsonEncode({
-            'enabled': true,
-            'start': '${start.toString().padLeft(2, '0')}:00',
-            'end': '${end.toString().padLeft(2, '0')}:00',
-          }),
-        );
-      } else {
-        await prefs.remove('fg_bedtime');
-      }
-      final hasRules = apps.isNotEmpty || schedule != null;
-      if (hasRules) {
-        await NativeCollectors.startWatcher();
-      } else {
-        await NativeCollectors.stopWatcher();
-      }
-      return hasRules;
-    } on ApiException {
-      // Backend unreachable: keep the last-synced rules, don't stop the
-      // watcher — enforcement must not silently drop on a network blip.
-      return false;
-    }
   }
 }

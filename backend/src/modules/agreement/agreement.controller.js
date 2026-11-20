@@ -1,4 +1,5 @@
 import { store, nextId } from '../../config/store.js';
+import { canAccessChild } from '../../middleware/access.js';
 
 // Family agreement: the parent proposes a set of joint rules and the child
 // signs them (accepts or declines). Only the latest agreement per child is
@@ -55,6 +56,11 @@ export async function signAgreement(req, res, next) {
     }
     const agreement = store.agreements.find((a) => a.id === req.params.id);
     if (!agreement) return res.status(404).json({ error: 'Agreement not found' });
+    // The route is addressed by agreement id, so the child check lives
+    // here: only the child the agreement belongs to may sign it.
+    if (!canAccessChild(req.user, agreement.childId)) {
+      return res.status(403).json({ error: 'No access to this child' });
+    }
     if (agreement.status !== 'proposed') {
       return res.status(409).json({ error: `Agreement is already ${agreement.status}` });
     }

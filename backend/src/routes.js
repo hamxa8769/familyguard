@@ -1,5 +1,11 @@
 // Single place where every feature module is mounted.
 // Adding a feature = import its router and add one app.use() line.
+//
+// API versioning (Phase 5): the existing router is mounted under BOTH
+// /api and /api/v1 (dual mount, same handlers), so /api/v1/* works
+// without breaking any existing client that calls /api/*.
+import { requireAuth } from './middleware/auth.js';
+import { me } from './modules/auth/auth.controller.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import consentRoutes from './modules/consent/consent.routes.js';
 import devicesRoutes from './modules/devices/devices.routes.js';
@@ -28,30 +34,33 @@ import requestsRoutes from './modules/requests/requests.routes.js';
 import feedRoutes from './modules/feed/feed.routes.js';
 
 export function registerRoutes(app) {
-  app.use('/api/auth', authRoutes);
-  app.use('/api/consent', consentRoutes);
-  app.use('/api/devices', devicesRoutes);
-  app.use('/api/children', childrenRoutes);
-  app.use('/api/usage', usageRoutes);
-  app.use('/api/screentime', screentimeRoutes);
-  app.use('/api/appblocking', appblockingRoutes);
-  app.use('/api/location', locationRoutes);
-  app.use('/api/geofencing', geofencingRoutes);
-  app.use('/api/sos', sosRoutes);
-  app.use('/api/webfilter', webfilterRoutes);
-  app.use('/api/bedtime', bedtimeRoutes);
-  app.use('/api/reports', reportsRoutes);
-  app.use('/api/transparency', transparencyRoutes);
-  app.use('/api/comms', commsRoutes);
-  app.use('/api/files', filesRoutes);
-  app.use('/api/remotecommands', remotecommandsRoutes);
-  app.use('/api/media', mediaRoutes);
-  app.use('/api/apps', appsRoutes);
-  app.use('/api/browsing', browsingRoutes);
-  app.use('/api/agreement', agreementRoutes);
-  app.use('/api/rewards', rewardsRoutes);
-  app.use('/api/keywords', keywordsRoutes);
-  app.use('/api/pair', pairingRoutes);
-  app.use('/api/requests', requestsRoutes);
-  app.use('/api/feed', feedRoutes);
+  for (const prefix of ['/api', '/api/v1']) {
+    app.get(`${prefix}/me`, requireAuth, me);
+    app.use(`${prefix}/auth`, authRoutes);
+    app.use(`${prefix}/consent`, consentRoutes);
+    app.use(`${prefix}/devices`, devicesRoutes);
+    app.use(`${prefix}/children`, childrenRoutes);
+    app.use(`${prefix}/usage`, usageRoutes);
+    app.use(`${prefix}/screentime`, screentimeRoutes);
+    app.use(`${prefix}/appblocking`, appblockingRoutes);
+    app.use(`${prefix}/location`, locationRoutes);
+    app.use(`${prefix}/geofencing`, geofencingRoutes);
+    app.use(`${prefix}/sos`, sosRoutes);
+    app.use(`${prefix}/webfilter`, webfilterRoutes);
+    app.use(`${prefix}/bedtime`, bedtimeRoutes);
+    app.use(`${prefix}/reports`, reportsRoutes);
+    app.use(`${prefix}/transparency`, transparencyRoutes);
+    app.use(`${prefix}/comms`, commsRoutes);
+    app.use(`${prefix}/files`, filesRoutes);
+    app.use(`${prefix}/remotecommands`, remotecommandsRoutes);
+    app.use(`${prefix}/media`, mediaRoutes);
+    app.use(`${prefix}/apps`, appsRoutes);
+    app.use(`${prefix}/browsing`, browsingRoutes);
+    app.use(`${prefix}/agreement`, agreementRoutes);
+    app.use(`${prefix}/rewards`, rewardsRoutes);
+    app.use(`${prefix}/keywords`, keywordsRoutes);
+    app.use(`${prefix}/pair`, pairingRoutes);
+    app.use(`${prefix}/requests`, requestsRoutes);
+    app.use(`${prefix}/feed`, feedRoutes);
+  }
 }

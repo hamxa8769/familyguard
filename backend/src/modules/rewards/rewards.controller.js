@@ -1,4 +1,5 @@
 import { store, nextId } from '../../config/store.js';
+import { parseLimitOffset, pageOf } from '../../middleware/pagination.js';
 
 // Rewards: points (and optional badges) for healthy habits. Every award is
 // stored as an event so the total is always derived, never a bare counter.
@@ -14,12 +15,19 @@ function totalPointsFor(childId) {
     .reduce((sum, e) => sum + e.points, 0);
 }
 
-function summarize(childId) {
+function summarize(childId, pagination) {
   const events = store.rewardEvents.filter((e) => e.childId === childId);
+  // totalPoints/badges are always computed over ALL events; only the
+  // returned event list is paginated (default limit 500 = whole history
+  // at family scale — see middleware/pagination.js).
+  const { items, total, limit, offset } = pageOf(events, pagination);
   return {
     childId,
     totalPoints: events.reduce((sum, e) => sum + e.points, 0),
-    events,
+    events: items,
+    total,
+    limit,
+    offset,
     badges: [...new Set(events.map((e) => e.badge).filter(Boolean))],
   };
 }
@@ -52,7 +60,7 @@ export async function awardPoints(req, res, next) {
 
 export async function getRewards(req, res, next) {
   try {
-    res.json(summarize(req.params.childId));
+    res.json(summarize(req.params.childId, parseLimitOffset(req)));
   } catch (err) {
     next(err);
   }

@@ -7,12 +7,17 @@ import '../../services/native_collectors.dart';
 /// Child side of remote commands: the app polls
 /// `GET /api/remotecommands?deviceId=…&status=pending` every 30 seconds
 /// (push is a notification only — polling is the delivery contract).
+/// The background sync ([SyncService]) polls the same endpoint, so
+/// `lock_now` / `unlock` can also run while the app is closed.
 ///
 /// What happens for each command (all visible to the child, nothing silent):
 ///  - lock_now: the child taps "Lock now" — the device locks via the
 ///    device admin, which the user activated in a visible system screen.
-///    Without the admin the button explains that instead.
-///  - unlock: stops the block watcher (lifts a bedtime/app-block overlay)
+///    Without the admin the button explains that instead. The background
+///    sync may also lock the device when the app is closed, if the admin
+///    is active.
+///  - unlock: stops nothing persistent (FamilyGuard holds no device lock;
+///    the screen lock is released by the child with their PIN/pattern)
 ///    and reports completed. Android has no remote-unlock API; the screen
 ///    is already unlocked when the child uses the device.
 ///  - send_message: shown as a banner; "Mark as read" acknowledges it.
@@ -24,13 +29,14 @@ import '../../services/native_collectors.dart';
 ///    persistent notification, an on-screen indicator and a beep at
 ///    start/stop. The clip is uploaded the same way.
 ///
-/// Each poll also syncs the parent-set app-blocking + bedtime rules into
-/// the native block watcher (see EnforcementSync).
+/// Rules (app blocking / bedtime / screen time / web filter) are NOT
+/// synced from here: they flow through `Enforcement.fetchAndApply` on
+/// every sync (foreground and background), enforced by the single
+/// `EnforcementService` / `DnsVpnService` pair.
 ///
-/// Wiring note: the app has no device-registration/login flow yet, so
-/// [deviceId] is passed in from main.dart and is empty until that lands
-/// (see the "device not registered yet" state below). The polling and
-/// acknowledge logic itself is real and matches the backend contract.
+/// Wiring: [deviceId] comes from pairing and is persisted by
+/// `AuthService`; the shared authenticated client is used, so requests
+/// carry the device token and the saved server URL.
 class RemoteCommandsScreen extends StatefulWidget {
   const RemoteCommandsScreen({super.key, required this.deviceId});
 
@@ -41,7 +47,7 @@ class RemoteCommandsScreen extends StatefulWidget {
 }
 
 class _RemoteCommandsScreenState extends State<RemoteCommandsScreen> {
-  final _api = ApiClient();
+  final _api = AuthService.instance.api;
   Timer? _timer;
   List<RemoteCommand> _pending = [];
   String? _error;
@@ -80,8 +86,6 @@ class _RemoteCommandsScreenState extends State<RemoteCommandsScreen> {
           _loading = false;
         });
       }
-      // Best-effort rule sync; EnforcementSync never throws.
-      await EnforcementSync.sync(_api, widget.deviceId);
     } on ApiException catch (e) {
       if (mounted) {
         setState(() {
@@ -134,7 +138,7 @@ class _RemoteCommandsScreenState extends State<RemoteCommandsScreen> {
   }
 
   Future<void> _handleUnlock(RemoteCommand command) async {
-    await NativeCollectors.stopWatcher();
+    // Nothing persistent to release: FamilyGuard holds no device lock.
     await _ack(command, 'completed');
   }
 
@@ -341,10 +345,10 @@ class _RemoteCommandsScreenState extends State<RemoteCommandsScreen> {
               ? const Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'This device is not registered yet, so there are no remote '
-                    'commands to show. Once device registration lands, commands '
-                    'from your parent will appear here — and nothing will ever '
-                    'run without showing here first.',
+                    'This device is not paired yet, so there are no remote '
+                    'commands to show. Once paired, commands from your '
+                    'parent will appear here — and screenshots and audio '
+                    'will never start without you answering first.',
                   ),
                 )
               : RefreshIndicator(
@@ -356,9 +360,10 @@ class _RemoteCommandsScreenState extends State<RemoteCommandsScreen> {
                         child: Padding(
                           padding: EdgeInsets.all(16),
                           child: Text(
-                            'Checked every 30 seconds. Screenshot and audio '
-                            'requests need your answer — they never start '
-                            'silently.',
+                            'Checked every 30 seconds (lock/unlock can also '
+                            'run from the background sync while the app is '
+                            'closed). Screenshot and audio requests need '
+                            'your answer — they never start silently.',
                           ),
                         ),
                       ),

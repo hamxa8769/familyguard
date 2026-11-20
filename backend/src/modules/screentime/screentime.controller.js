@@ -1,5 +1,7 @@
 import { store } from '../../config/store.js';
+import { bumpRulesVersion } from '../devices/devices.controller.js';
 import { bonusMinutesToday } from './screentime.service.js';
+import { notifyRuleChange } from '../../services/pushService.js';
 
 // Daily screen-time cap (minutes) per device.
 export async function setLimit(req, res, next) {
@@ -14,6 +16,10 @@ export async function setLimit(req, res, next) {
     } else {
       store.screenTimeLimits.push({ deviceId: req.params.deviceId, dailyMinutes });
     }
+    // Best-effort push so the child applies the new rules at once instead
+    // of waiting for its next 15-minute poll; never fails the request.
+    await notifyRuleChange(req.params.deviceId);
+    bumpRulesVersion(req.device);
     res.json({ deviceId: req.params.deviceId, dailyMinutes });
   } catch (err) {
     next(err);

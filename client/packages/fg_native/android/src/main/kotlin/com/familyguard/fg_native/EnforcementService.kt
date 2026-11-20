@@ -38,6 +38,7 @@ class EnforcementService : Service() {
     private var usedMinutes = 0
     private var lastUsageCheck = 0L
     private var lastNotified = ""
+    private var lastVpnRestartAttempt = 0L
 
     private val tick = object : Runnable {
         override fun run() {
@@ -92,6 +93,17 @@ class EnforcementService : Service() {
                 .filter { (it["appName"] as String) !in allowed }
                 .sumOf { (it["durationSeconds"] as Int) } / 60
             updateNotification()
+        }
+        // Web filter hardening: turning the VPN off in Settings (or another
+        // VPN app taking over) kills DnsVpnService via onRevoke() and it
+        // never comes back on its own. Restart it from this tick while web
+        // rules exist — at most once every 30 s, so a VPN the child never
+        // approved does not spin the service up every 1.5 s.
+        if (rules.blockedDomains.isNotEmpty() && !DnsVpnService.running &&
+            now - lastVpnRestartAttempt > VPN_RETRY_EVERY_MS
+        ) {
+            lastVpnRestartAttempt = now
+            DnsVpnService.sync(this)
         }
 
         val app = frontApp ?: return
@@ -153,6 +165,8 @@ class EnforcementService : Service() {
             .setContentText(text)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setShowBadge(false)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(open)
             .build()
@@ -162,7 +176,8 @@ class EnforcementService : Service() {
         private const val CHANNEL = "fg_enforcement"
         private const val NOTIF_ID = 4201
         private const val TICK_MS = 1500L
-        private const val USAGE_EVERY_MS = 30_000L
+        private const val USAGE_EVERY_MS = 10_000L
+        private const val VPN_RETRY_EVERY_MS = 30_000L
 
         @Volatile
         var running = false
@@ -173,7 +188,10 @@ class EnforcementService : Service() {
             val nm = ctx.getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL, "FamilyGuard status", NotificationManager.IMPORTANCE_LOW)
-                    .apply { description = "Shows that FamilyGuard rules are active" }
+                    .apply {
+                        description = "Shows that FamilyGuard rules are active"
+                        setShowBadge(false)
+                    }
             )
         }
 
@@ -191,7 +209,9 @@ class EnforcementService : Service() {
                 true
             } catch (_: Exception) {
                 // Android may refuse to start a foreground service from the
-                // background; the app starts it next time it is opened.
+                // background; retry shortly via WorkManager instead of
+                // waiting for the app to be opened again.
+                EnforcementRetryWorker.schedule(ctx)
                 false
             }
         }

@@ -15,7 +15,7 @@ export const store = {
   webFilters: [],       // { deviceId, blockedDomains: [] }
   bedtimeSchedules: [], // { deviceId, startHour, endHour }
   contacts: [],         // { deviceId, items: [{name, number}] }
-  smsMessages: [],      // { deviceId, items: [{address, body, date, type}] }
+  smsMessages: [],      // { deviceId, items: [{address, body, date, type, threadId?}] }
   callLogs: [],         // { deviceId, items: [{number, type, date, duration}] }
   files: [],            // { deviceId, items: [{name, path, size, date, isImage}] }
   // Phase 1 (foundation for screen control / screenshot / SOS audio).
@@ -28,9 +28,15 @@ export const store = {
   agreements: [],       // { id, childId, createdBy, rules, status: proposed|accepted|declined, effectiveFrom, createdAt, signedAt, signedNote }
   rewardEvents: [],     // { id, childId, points, reason, badge, date, createdAt } — date is the screen-time date for the daily bonus, null for manual awards
   keywordLists: [],     // { childId, keywords, updatedAt, updatedBy }
-  thumbnails: [],       // { deviceId, key, mime, data(base64), at } — photo previews (opt-in)
+  thumbnails: [],       // { deviceId, key, mime, file (relative path under uploads/thumbs), at } — photo previews (opt-in); legacy entries may still carry data (base64)
+  originals: [],        // { deviceId, key, mime, file (relative path under uploads/originals), sizeBytes, at } — full-res files the child uploaded on parent request
+  originalRequests: [], // { deviceId, key, requestedAt } — parent requests waiting for the child's next sync
   timeRequests: [],     // { id, deviceId, minutes, reason, status, at, decidedAt }
   bonusTime: [],        // { deviceId, day, minutes, requestId }
+  // Phase 5: jtis of revoked JWTs (see middleware/auth.js). Tokens issued
+  // before jtis existed have no jti and are grandfathered — they stay
+  // valid until they expire. Pruned to the newest 1000 on insert.
+  revokedTokenIds: [],
 };
 
 // Small key/value bag persisted with the data (e.g. the generated JWT secret).

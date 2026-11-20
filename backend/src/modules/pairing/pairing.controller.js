@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import { store, nextId } from '../../config/store.js';
 import { newPairingCode } from './pairing.service.js';
 import { jwtSecret } from '../../config/secrets.js';
@@ -32,7 +33,14 @@ export async function pairDevice(req, res, next) {
     child.pairingCode = newPairingCode();
 
     const token = jwt.sign(
-      { id: device.id, role: 'device', deviceId: device.id, childId: child.id, parentId: child.parentId },
+      {
+        id: device.id,
+        role: 'device',
+        deviceId: device.id,
+        childId: child.id,
+        parentId: child.parentId,
+        jti: crypto.randomUUID(),
+      },
       jwtSecret(),
       { expiresIn: '365d' }
     );

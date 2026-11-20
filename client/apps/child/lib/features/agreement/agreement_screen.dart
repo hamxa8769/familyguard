@@ -17,7 +17,7 @@ class AgreementScreen extends StatefulWidget {
 }
 
 class _AgreementScreenState extends State<AgreementScreen> {
-  final _api = ApiClient();
+  ApiClient get _api => AuthService.instance.api;
   FamilyAgreement? _agreement;
   String? _status;
   bool _loading = true;
