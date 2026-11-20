@@ -1,6 +1,6 @@
 {
   "name": "familyguard-backend",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Modular API for the FamilyGuard parental-control app",
   "type": "module",
   "main": "src/index.js",

@@ -15,6 +15,18 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
 - ML/sentiment alerts (design only — no model bundled)
 - Device-owner setup for kiosk-grade enforcement (out of scope for sideload)
 
+## [0.9.2] - 2026-11-20
+
+New app icon: the chosen minimal line-art logo (parent + child figures,
+thin teal line in a rounded square) is now the launcher icon for both the
+child and parent apps. Child/parent 0.9.2+12, backend 0.9.2.
+
+### Changed
+- **App icon:** new logo applied to Android (all mipmap densities, plus
+  adaptive icon with matching #EEEEEE background) and Windows
+  (`app_icon.ico`) for both apps. Logo source kept in the repo at
+  `assets/logo/familyguard-logo.png`.
+
 ## [0.9.1] - 2026-11-20
 
 Field-test fixes for the v0.9.0 complaints, plus professional hardening.
