@@ -106,19 +106,21 @@ jobs:
   windows:
     name: Build Windows EXEs
     runs-on: windows-latest
+    # The whole release is gated on the Android job: if signing secrets are
+    # missing (or an APK build fails), no release is created at all — the
+    # Windows job must not publish a Windows-only release from a failed run.
+    needs: android
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      # TODO (same class of bug as Android had): the windows/ folders are not
-      # committed either, so these builds also regenerate them every run.
-      # Commit them the same way if Windows installs ever misbehave.
+      # The windows/ folders are committed (v0.7.1), same as android/ — the
+      # builds below use them directly and never regenerate them.
       - name: Build CHILD windows
         working-directory: client/apps/child
         run: |
-          flutter create --org com.familyguard --project-name familyguard_child --platforms=windows .
           flutter pub get
           flutter build windows --release
       - name: Zip CHILD
@@ -128,7 +130,6 @@ jobs:
       - name: Build PARENT windows
         working-directory: client/apps/parent
         run: |
-          flutter create --org com.familyguard --project-name familyguard_parent --platforms=windows .
           flutter pub get
           flutter build windows --release
       - name: Zip PARENT

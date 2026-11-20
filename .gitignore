@@ -9,6 +9,8 @@ backend/uploads/
 **/android/key.properties
 **/android/local.properties
 **/android/app/familyguard-release.keystore
+# Local-only signing note (passwords) — never commit.
+SIGNING_SECRETS.local.md
 
 # Flutter
 client/.dart_tool/

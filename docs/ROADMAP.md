@@ -26,9 +26,21 @@ config, so it was debug-signed and could not reliably install/update.
   applicationIds: child `com.familyguard.familyguard_child`, parent
   `com.familyguard.familyguard_parent`; minSdk 24 / targetSdk 36 (Flutter
   3.50 defaults).
+- [x] `windows/` folders committed for both apps the same way (the
+  release job used to regenerate them with `flutter create` on every
+  run). The Windows release job is gated on the Android job (`needs:
+  android`), so a signing failure blocks the whole release instead of
+  publishing a Windows-only one.
 - [x] Release signing via GitHub Secrets (keystore never committed) —
   see [SIGNING.md](SIGNING.md). The release job fails loudly if the
   secrets are missing, instead of publishing another uninstallable APK.
+- [x] **New keystore from v0.7.1 (user choice, 2026-11-20):** the user
+  had an old keystore but chose to discard it; a new one (alias
+  `familyguard`, RSA 2048, 10,000-day validity) was made for v0.7.1.
+  The old Parent app MUST be uninstalled first and installed fresh —
+  in-place update from the old key is impossible. The new keystore and
+  passwords live only in a local secure note
+  (`SIGNING_SECRETS.local.md`, git-ignored, never committed).
 - [x] Universal APK (not `--split-per-abi`) for sideloading.
 - [x] Version bumped to 0.7.1+8.
 - [ ] Still needs the user: create the keystore and add the four

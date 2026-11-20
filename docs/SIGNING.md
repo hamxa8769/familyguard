@@ -13,6 +13,24 @@ From v0.7.1 the `android/` folders are committed, and release builds use
 one stable release keystore supplied **only through GitHub Secrets**.
 The keystore and its passwords are never committed to the repo.
 
+## 0. Keystore decision — new key from v0.7.1 (user choice, 2026-11-20)
+
+The user **has** an old keystore, but decided it is **discarded**: a **new**
+release keystore was made for v0.7.1 (alias `familyguard`, RSA 2048,
+validity 10,000 days), and all releases from v0.7.1 onwards use the new
+one. The new keystore and its passwords live only on the release machine
+in a local secure note (`SIGNING_SECRETS.local.md`, git-ignored, never
+committed) — see §2 for the GitHub Secrets that must be set from it.
+
+**Consequence, stated plainly: the old Parent app MUST be uninstalled
+first and installed fresh. An in-place update from the old signing key
+is impossible** — Android refuses to install an update signed with a
+different key, and shows only the generic "App not installed" error.
+This is a deliberate user choice, not a mistake: the old key is gone
+by decision, so every user on the old build uninstalls first. Keep the
+new keystore safe — losing it means the same thing happens again at the
+next rotation.
+
 ## 1. Create the keystore (once, on your own machine)
 
 ```bash
@@ -24,7 +42,10 @@ keytool -genkeypair -v \
 
 Keep the keystore file and its passwords safe — losing it means already
 installed apps can never be updated in place again (users must uninstall
-and reinstall, losing local data).
+and reinstall, losing local data). For v0.7.1 the new keystore was
+already created this way (see §0); do **not** create another one unless
+the user explicitly asks for a rotation — a new keystore always forces
+everyone to uninstall first.
 
 ## 2. Add the secrets (repo Settings → Secrets and variables → Actions)
 

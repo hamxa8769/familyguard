@@ -17,8 +17,14 @@ project uses [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`).
   (see [SIGNING.md](docs/SIGNING.md)). The release job now fails loudly
   if the signing secrets are missing, instead of publishing another
   debug-signed APK. Universal APK (not split-per-abi) for sideloading.
-  Users updating from v0.7.0 should uninstall the old Parent app first,
-  then install v0.7.1 fresh (different signing key).
+  **New keystore from v0.7.1 (user choice):** the user had an old
+  keystore but chose to discard it; a new one (alias `familyguard`, RSA
+  2048, 10,000-day validity) was made for this release. Users updating
+  from v0.7.0 MUST uninstall the old Parent app first, then install
+  v0.7.1 fresh — in-place update from the old key is impossible.
+  The `windows/` folders are committed too, and the Windows release job
+  is gated on the Android job, so a signing failure blocks the whole
+  release instead of publishing a Windows-only one.
 
 ### Added
 - **Remote commands** (`POST/GET /api/remotecommands`): `lock_now`,
